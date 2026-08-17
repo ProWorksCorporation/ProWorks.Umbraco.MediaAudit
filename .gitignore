@@ -24,6 +24,14 @@ src/UmbracoMediaAudit.Web/umbraco/Logs/
 src/UmbracoMediaAudit.Web/wwwroot/media/
 src/UmbracoMediaAudit.Web/wwwroot/umbraco/
 
+# uSync (src/UmbracoMediaAudit.Web/uSync/) exports schema-as-code on every startup - see its own
+# README.md. DataTypes/ContentTypes/MemberTypes/Languages/MediaTypes/RelationTypes are genuinely
+# reproducible schema and ARE committed. Its "Media" folder just tracks node metadata (name/path/
+# dates) for whatever's currently uploaded in wwwroot/media/ - since that folder is itself
+# gitignored above, committing Media/ configs would reference files that don't exist on a fresh
+# clone, so it's excluded the same way.
+src/UmbracoMediaAudit.Web/uSync/v*/Media/
+
 # === OS / editor cruft ===
 .DS_Store
 Thumbs.db
