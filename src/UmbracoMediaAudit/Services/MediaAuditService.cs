@@ -12,15 +12,23 @@ public sealed class MediaAuditService : IMediaAuditService
 
     private readonly IMediaService _mediaService;
     private readonly IRelationService _relationService;
+    private readonly IContentService _contentService;
+    private readonly IMediaReferenceScanner _scanner;
 
     private readonly object _lock = new();
     private AuditRun _currentRun = new() { Status = AuditRunStatus.Complete, RunAt = null };
     private IReadOnlyList<MediaAuditItem> _items = Array.Empty<MediaAuditItem>();
 
-    public MediaAuditService(IMediaService mediaService, IRelationService relationService)
+    public MediaAuditService(
+        IMediaService mediaService,
+        IRelationService relationService,
+        IContentService contentService,
+        IMediaReferenceScanner scanner)
     {
         _mediaService = mediaService;
         _relationService = relationService;
+        _contentService = contentService;
+        _scanner = scanner;
     }
 
     public AuditRun GetCurrentAudit()
@@ -59,6 +67,89 @@ public sealed class MediaAuditService : IMediaAuditService
                 : _items.Where(i => i.UsageStatus == status).ToList();
         }
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<MediaUsageReference>?> GetUsagesAsync(Guid mediaKey, CancellationToken cancellationToken = default)
+    {
+        var media = _mediaService.GetById(mediaKey);
+        if (media is null)
+        {
+            return null;
+        }
+
+        // Authoritative "is it used, and by which content items" signal (research.md §4).
+        var relationContentIds = GetRelatedContentIds(media.Id);
+
+        // Editor-agnostic per-property/culture scan (research.md §4, §8) - this is what actually
+        // attributes *which* culture/property holds the reference, since IRelation itself carries no
+        // culture/property information. It naturally covers every content item, not just
+        // relation-linked ones, so it also catches anything the relation layer missed.
+        var scanResults = await _scanner.FindReferencesAsync(media, cancellationToken);
+
+        var results = new List<MediaUsageReference>();
+        var attributedContentIds = new HashSet<int>();
+
+        foreach (var usage in scanResults)
+        {
+            var isRelationConfirmed = relationContentIds.Contains(usage.ContentId);
+            if (isRelationConfirmed)
+            {
+                attributedContentIds.Add(usage.ContentId);
+            }
+
+            // A relation is the authoritative "used" signal even when the scan also independently
+            // matched the same content item - report it as Relation rather than Scan in that case.
+            results.Add(isRelationConfirmed ? WithDetectionSource(usage, MediaUsageDetectionSource.Relation) : usage);
+        }
+
+        // A relation exists for a content item the scan found no textual match in (e.g. a
+        // property/editor whose stored value doesn't literally contain the media's GUID/path). Still
+        // surface it - without per-property/culture attribution - rather than silently dropping it;
+        // if the content itself no longer resolves (stale relation to deleted content), it's skipped,
+        // which is exactly the data-integrity condition callers must handle (see interface doc).
+        foreach (var contentId in relationContentIds.Except(attributedContentIds))
+        {
+            var content = _contentService.GetById(contentId);
+            if (content is null)
+            {
+                continue;
+            }
+
+            results.Add(new MediaUsageReference
+            {
+                ContentId = content.Id,
+                ContentKey = content.Key,
+                ContentName = content.Name ?? $"(content {content.Id})",
+                ContentTypeAlias = content.ContentType.Alias,
+                Culture = null,
+                PropertyAlias = null,
+                PublishState = content.Published ? ContentPublishState.Published : ContentPublishState.Draft,
+                DetectionSource = MediaUsageDetectionSource.Relation,
+                EditUrl = BackofficeLinks.ContentEditUrl(content.Key),
+            });
+        }
+
+        return results;
+    }
+
+    private HashSet<int> GetRelatedContentIds(int mediaId) =>
+        _relationService.GetByChildId(mediaId)
+            .Where(r => r.RelationType.Alias == CoreConstants.Conventions.RelationTypes.RelatedMediaAlias)
+            .Select(r => r.ParentId)
+            .ToHashSet();
+
+    private static MediaUsageReference WithDetectionSource(MediaUsageReference usage, MediaUsageDetectionSource source) => new()
+    {
+        ContentId = usage.ContentId,
+        ContentKey = usage.ContentKey,
+        ContentName = usage.ContentName,
+        ContentTypeAlias = usage.ContentTypeAlias,
+        Culture = usage.Culture,
+        PropertyAlias = usage.PropertyAlias,
+        PublishState = usage.PublishState,
+        DetectionSource = source,
+        EditUrl = usage.EditUrl,
+    };
 
     private void ExecuteAuditAsync(CancellationToken cancellationToken)
     {
@@ -127,11 +218,8 @@ public sealed class MediaAuditService : IMediaAuditService
     /// </summary>
     private MediaAuditItem ClassifyMedia(IMedia media)
     {
-        var relations = _relationService.GetByChildId(media.Id)
-            .Where(r => r.RelationType.Alias == CoreConstants.Conventions.RelationTypes.RelatedMediaAlias)
-            .ToList();
-
-        var isUsed = relations.Count > 0;
+        var relatedContentIds = GetRelatedContentIds(media.Id);
+        var isUsed = relatedContentIds.Count > 0;
 
         return new MediaAuditItem
         {
@@ -146,8 +234,9 @@ public sealed class MediaAuditService : IMediaAuditService
             CreateDate = media.CreateDate,
             UpdateDate = media.UpdateDate,
             UsageStatus = isUsed ? MediaUsageStatus.Used : MediaUsageStatus.Unused,
-            UsageCount = relations.Select(r => r.ParentId).Distinct().Count(),
+            UsageCount = relatedContentIds.Count,
             DetectionSource = isUsed ? MediaDetectionSource.Relation : MediaDetectionSource.None,
+            MediaEditUrl = BackofficeLinks.MediaEditUrl(media.Key),
         };
     }
 

@@ -95,11 +95,11 @@ Per plan.md's Project Structure — single Umbraco package project (RCL), not a 
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement `GET /items/{key}/usages` resolving the combined relation+scan `UsageReference` list (`culture`, `publishState`, `detectionSource`, `editUrl`) in `MediaAuditApiController` + `MediaAuditService` per FR-004, FR-005, FR-017 and contracts §GET /items/{key}/usages
-- [ ] T028 [US2] Implement the stale-relation data-integrity signal (a `Used` item that resolves zero usages) in `MediaAuditService` per the data-model.md validation rules
-- [ ] T029 [P] [US2] Create `src/UmbracoMediaAudit/Client/src/dashboard/media-audit-detail.element.ts` rendering the usage list (content name/type/culture/publish-state badges, navigate links) per FR-005 and User Story 2 Acceptance Scenarios 1–2
-- [ ] T030 [US2] Wire dashboard row-click to open the detail element (UUI modal/workspace) in `media-audit-dashboard.element.ts` (depends on T023, T029)
-- [ ] T031 [US2] Implement backoffice deep-link construction (`editUrl`) for referencing content items in `MediaAuditService` per contracts §GET /items/{key}/usages
+- [X] T027 [US2] Implement `GET /items/{key}/usages` resolving the combined relation+scan `UsageReference` list (`culture`, `publishState`, `detectionSource`, `editUrl`) in `MediaAuditApiController` + `MediaAuditService` per FR-004, FR-005, FR-017 and contracts §GET /items/{key}/usages
+- [X] T028 [US2] Implement the stale-relation data-integrity signal (a `Used` item that resolves zero usages) in `MediaAuditService` per the data-model.md validation rules
+- [X] T029 [P] [US2] Create `src/UmbracoMediaAudit/Client/src/dashboard/media-audit-detail.element.ts` rendering the usage list (content name/type/culture/publish-state badges, navigate links) per FR-005 and User Story 2 Acceptance Scenarios 1–2
+- [X] T030 [US2] Wire dashboard row-click to open the detail element (UUI modal/workspace) in `media-audit-dashboard.element.ts` (depends on T023, T029) — implemented as an inline expansion in the existing detail panel rather than a separate modal/workspace; also added a minimal Unused/Used status toggle since the table previously only ever fetched "Unused" items and Used items were otherwise unreachable (the full status/type/folder filter UI remains US3's T035)
+- [X] T031 [US2] Implement backoffice deep-link construction (`editUrl`) for referencing content items in `MediaAuditService` per contracts §GET /items/{key}/usages — via the existing `BackofficeLinks.ContentEditUrl` helper
 
 **Checkpoint**: User Stories 1 and 2 both work independently.
 

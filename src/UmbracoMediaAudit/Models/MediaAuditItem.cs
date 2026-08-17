@@ -46,6 +46,9 @@ public sealed class MediaAuditItem
     /// deferred deep-scan mode (research.md §4) and not currently reachable.
     /// </summary>
     public required MediaDetectionSource DetectionSource { get; init; }
+
+    /// <summary>Constructed backoffice deep link to open the media item itself in the Media section.</summary>
+    public required string MediaEditUrl { get; init; }
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

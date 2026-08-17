@@ -51,6 +51,7 @@ export interface MediaAuditItem {
   usageStatus: MediaUsageStatus;
   usageCount: number;
   detectionSource: MediaDetectionSource;
+  mediaEditUrl: string;
 }
 
 export interface MediaAuditItemsResponse {

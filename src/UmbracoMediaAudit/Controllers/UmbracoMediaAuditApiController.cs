@@ -49,6 +49,24 @@ namespace UmbracoMediaAudit.Controllers
                 Items = items,
             });
         }
+
+        /// <summary>
+        /// GET /items/{key}/usages - FR-004, FR-005, FR-017. Runs lazily - only for the item an
+        /// editor actually opens, not precomputed for every row in GET /items.
+        /// </summary>
+        [HttpGet("items/{key:guid}/usages")]
+        [ProducesResponseType<MediaUsagesResponse>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<ActionResult<MediaUsagesResponse>> GetUsages(Guid key, CancellationToken cancellationToken)
+        {
+            var usages = await _auditService.GetUsagesAsync(key, cancellationToken);
+            if (usages is null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new MediaUsagesResponse { MediaKey = key, Usages = usages });
+        }
     }
 
     /// <summary>Response envelope for GET /items (contracts §GET /items).</summary>
@@ -58,5 +76,12 @@ namespace UmbracoMediaAudit.Controllers
         public required int PageSize { get; init; }
         public required int TotalItems { get; init; }
         public required IReadOnlyList<MediaAuditItem> Items { get; init; }
+    }
+
+    /// <summary>Response envelope for GET /items/{key}/usages (contracts §GET /items/{key}/usages).</summary>
+    public sealed class MediaUsagesResponse
+    {
+        public required Guid MediaKey { get; init; }
+        public required IReadOnlyList<MediaUsageReference> Usages { get; init; }
     }
 }
