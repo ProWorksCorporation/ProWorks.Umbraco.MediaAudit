@@ -2,10 +2,22 @@
 // openapi-ts client (research.md keeps this simple/self-contained rather than depending on
 // regenerating a client against a live swagger doc during development).
 
+import type { UmbAuthContext } from "@umbraco-cms/backoffice/auth";
+
 // Confirmed against the running site's actual swagger.json - matches contracts/media-audit-api.md
 // exactly. Derived from `[BackOfficeRoute("media-audit/api/v{version:apiVersion}")]` on
 // UmbracoMediaAuditApiControllerBase.
 const API_BASE = "/umbraco/media-audit/api/v1";
+
+// The backoffice Management API requires a Bearer token per request (cookie-based auth alone
+// 401s with "missing_token") - the dashboard element wires this up via setAuthContext() once it
+// has consumed UMB_AUTH_CONTEXT, per UmbAuthContext.getOpenApiConfiguration()'s own doc example
+// for manual fetch calls.
+let authContext: UmbAuthContext | undefined;
+
+export function setAuthContext(context: UmbAuthContext): void {
+  authContext = context;
+}
 
 export type MediaUsageStatus = "Used" | "Unused";
 export type MediaDetectionSource = "None" | "Relation" | "Scan" | "Both";
@@ -61,10 +73,20 @@ export interface MediaUsageReference {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const config = authContext?.getOpenApiConfiguration();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (config) {
+    const token = await config.token();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    credentials: config?.credentials ?? "include",
     ...init,
+    headers,
   });
 
   if (!response.ok) {

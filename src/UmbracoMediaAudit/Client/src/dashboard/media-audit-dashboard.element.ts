@@ -8,8 +8,10 @@ import {
 } from "@umbraco-cms/backoffice/external/lit";
 import { UmbElementMixin } from "@umbraco-cms/backoffice/element-api";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
+import { UMB_AUTH_CONTEXT } from "@umbraco-cms/backoffice/auth";
 import {
   MediaAuditRepository,
+  setAuthContext,
   type AuditRun,
   type MediaAuditItem,
 } from "../api/media-audit.repository.js";
@@ -47,12 +49,14 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
     this.consumeContext(UMB_NOTIFICATION_CONTEXT, (context) => {
       this.#notificationContext = context;
     });
-  }
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    this.#loadSummary();
-    this.#loadItems();
+    // Loading is deferred until the auth context arrives (see setAuthContext in
+    // media-audit.repository.ts) so the first request carries a Bearer token instead of 401ing.
+    this.consumeContext(UMB_AUTH_CONTEXT, (context) => {
+      if (!context) return;
+      setAuthContext(context);
+      this.#loadSummary();
+      this.#loadItems();
+    });
   }
 
   override disconnectedCallback(): void {
