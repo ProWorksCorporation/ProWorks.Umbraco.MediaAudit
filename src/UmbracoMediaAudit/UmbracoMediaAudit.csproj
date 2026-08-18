@@ -17,6 +17,10 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>umbraco-marketplace umbraco-package media-audit</PackageTags>
     <RepositoryUrl>https://github.com/ProWorksCorporation/Umbraco.MediaAudit</RepositoryUrl>
+    <!-- Marketplace listing sources package name/authors/description/readme/project URL straight from
+         NuGet metadata (T059, research.md §2) - PackageReadmeFile is what makes the repo root README
+         also serve as the NuGet/Marketplace readme, rather than needing a separate copy. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
 
@@ -36,6 +40,9 @@
 
     <!-- However make the Umbraco-package.json included for dotnet pack or nuget package and visible to the solution -->
     <None Include="Client\public\umbraco-package.json" Pack="false" />
+
+    <!-- Repo-root README becomes the NuGet package's README (PackageReadmeFile above) -->
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
