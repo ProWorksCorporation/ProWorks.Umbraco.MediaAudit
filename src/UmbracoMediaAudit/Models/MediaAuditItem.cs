@@ -16,8 +16,11 @@ public sealed class MediaAuditItem
 
     public required string Name { get; init; }
 
-    /// <summary>e.g. "image", "file" - <c>IMedia.ContentType.Alias</c>.</summary>
+    /// <summary>e.g. "image", "file" - <c>IMedia.ContentType.Alias</c>. Used for filtering (FR-007); <see cref="MediaTypeName"/> is for display.</summary>
     public required string MediaTypeAlias { get; init; }
+
+    /// <summary>e.g. "Image", "File" - <c>IMedia.ContentType.Name</c>, the human-readable label shown in the UI.</summary>
+    public required string MediaTypeName { get; init; }
 
     /// <summary>From the built-in <c>umbracoExtension</c> property. Null for container/folder media types (research.md §6).</summary>
     public string? Extension { get; init; }

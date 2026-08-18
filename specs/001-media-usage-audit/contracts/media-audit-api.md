@@ -49,10 +49,11 @@ Returns the paged, filtered, sorted list of `MediaAuditItem` (FR-006, FR-007, FR
   "items": [
     {
       "id": 1234, "key": "b1a2...", "name": "hero-banner-old.jpg",
-      "mediaTypeAlias": "image", "extension": "jpg", "sizeBytes": 482113,
+      "mediaTypeAlias": "image", "mediaTypeName": "Image", "extension": "jpg", "sizeBytes": 482113,
       "path": "/Campaign Assets/2023", "folderId": 987,
       "createDate": "2023-04-01T09:00:00Z", "updateDate": "2023-04-01T09:00:00Z",
-      "usageStatus": "Unused", "usageCount": 0, "detectionSource": "None"
+      "usageStatus": "Unused", "usageCount": 0, "detectionSource": "None",
+      "mediaEditUrl": "/umbraco/section/media/workspace/media/edit/b1a2..."
     }
   ]
 }
@@ -86,7 +87,38 @@ empty, unexplained list.
 Returns the currently filtered/sorted result set (same query params as `GET /items`, no paging) as a
 downloadable file (FR-009). Response `Content-Type` is a spreadsheet-compatible format
 (e.g. `text/csv`); columns match the `MediaAuditItem` fields used for display (name, status, size,
-type, folder, dates).
+type, folder, dates), plus a `UsedOnPages` column - the names of content items referencing a "Used"
+item (semicolon-separated), blank for "Unused" ones. Sourced from the relation-based signal only
+(research.md §4's fast primary signal, including the ancestor-folder fallback), not the full
+combined relation+scan lookup `GET /items/{key}/usages` does - keeps a large export fast.
+
+## GET /folders
+
+Returns every `MediaFolder` in the library (data-model.md), for the folder filter dropdown (FR-007).
+Not part of the original contract draft - added alongside `GET /items`'s `folderId` filter once it
+became clear the client needs folder names/paths to populate that dropdown, not just ids to filter by.
+
+**Response 200**:
+```json
+{
+  "folders": [
+    { "id": 987, "name": "2023", "path": "/Campaign Assets/2023", "parentId": 654 }
+  ]
+}
+```
+
+## GET /media-types
+
+Returns the distinct media types across the last audit run, for the type filter dropdown (FR-007).
+Like `GET /folders`, not part of the original contract draft - added for the same reason (the client
+needs the actual set of type options to populate a dropdown, not just something to filter by once
+chosen). Both `alias` (used as `GET /items`'s `mediaTypeAlias` filter value) and `name` (the
+human-readable label to display) are returned, since they can differ (e.g. `file` vs. "File").
+
+**Response 200**:
+```json
+{ "mediaTypes": [ { "alias": "file", "name": "File" }, { "alias": "image", "name": "Image" } ] }
+```
 
 ## POST /delete — **Admin-only**
 

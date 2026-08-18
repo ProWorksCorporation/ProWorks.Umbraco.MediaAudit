@@ -19,8 +19,32 @@ public interface IMediaAuditService
     /// </summary>
     Task<AuditRun> RunAuditAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Base item listing, filtered by usage status only (FR-002, FR-006). Full filter/sort/paging is added in User Story 3.</summary>
-    IReadOnlyList<MediaAuditItem> GetItems(MediaUsageStatus? status = null);
+    /// <summary>
+    /// Filtered/sorted/paged item listing (FR-002, FR-006, FR-007, FR-008; contracts §GET /items).
+    /// </summary>
+    MediaAuditItemsResult GetItems(MediaAuditItemsQuery query);
+
+    /// <summary>
+    /// The same filter/sort as <see cref="GetItems"/>, but the full matching set with no paging
+    /// applied - <paramref name="query"/>'s <c>Page</c>/<c>PageSize</c> are ignored (contracts
+    /// §GET /export: "same query params as GET /items, no paging").
+    /// </summary>
+    IReadOnlyList<MediaAuditItem> GetExportItems(MediaAuditItemsQuery query);
+
+    /// <summary>Media library folders, for the folder filter dropdown (FR-007, data-model.md MediaFolder).</summary>
+    IReadOnlyList<MediaFolder> GetFolders();
+
+    /// <summary>Distinct media types (alias + display name) across the last audit run, for the type filter dropdown (FR-007).</summary>
+    IReadOnlyList<MediaTypeOption> GetMediaTypeOptions();
+
+    /// <summary>
+    /// Content item names referencing this media item, for GET /export's "Used On Pages" column
+    /// (FR-009). Relation-based only (research.md §4's fast primary signal, including the
+    /// ancestor-folder fallback) rather than the full combined relation+scan lookup
+    /// <see cref="GetUsagesAsync"/> does - export can cover a large filtered set at once, and the
+    /// scan-based safety net's cost isn't worth paying per row just to name pages in a CSV.
+    /// </summary>
+    IReadOnlyList<string> GetUsedOnPageNames(int mediaId);
 
     /// <summary>
     /// Resolves the combined relation+scan <see cref="MediaUsageReference"/> list for one media item

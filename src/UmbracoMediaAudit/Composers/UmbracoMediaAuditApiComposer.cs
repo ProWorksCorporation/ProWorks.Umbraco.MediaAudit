@@ -9,6 +9,8 @@ using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
 using Umbraco.Cms.Api.Management.OpenApi;
 using Umbraco.Cms.Api.Common.OpenApi;
+using Umbraco.Extensions;
+using UmbracoMediaAudit.Migrations;
 using UmbracoMediaAudit.Services;
 
 namespace UmbracoMediaAudit.Composers
@@ -21,6 +23,12 @@ namespace UmbracoMediaAudit.Composers
             // backoffice session (spec.md Assumptions - not persisted between requests otherwise).
             builder.Services.AddSingleton<IMediaReferenceScanner, MediaReferenceScanner>();
             builder.Services.AddSingleton<IMediaAuditService, MediaAuditService>();
+
+            // User Story 4 (delete/purge/deletion-log, research.md §10).
+            builder.Services.AddSingleton<IDeletionLogService, DeletionLogService>();
+            builder.Services.AddSingleton<IMediaDeleteService, MediaDeleteService>();
+            builder.Services.AddSingleton<IMediaPurgeService, MediaPurgeService>();
+            builder.PackageMigrationPlans().Add<AddDeletionLogTablePlan>();
 
             builder.Services.AddSingleton<IOperationIdHandler, CustomOperationHandler>();
 

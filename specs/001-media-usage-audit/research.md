@@ -135,6 +135,21 @@ in this research pass to implement `IDataValueReference` with the same certainty
 Grid. This is a known residual risk, explicitly mitigated by the scan-based layer above, which does
 not depend on which editor stored the value.
 
+**Folder-level references (found during User Story 3 implementation)**: a property can pick a media
+*folder* itself (e.g. a gallery/slideshow block that picks a folder and renders whatever's inside it
+at request time) rather than each child file individually. Umbraco then records the relation on the
+folder node, never on its children — so without an explicit fix, every file in such a folder would be
+misclassified "Unused" (and eligible for delete) despite being genuinely rendered on the site. Fix:
+both classification (`MediaAuditService.ClassifyMedia`) and usage-detail lookup (`GetUsagesAsync`)
+fall back to checking whether *any ancestor folder* is itself referenced (relation-based for
+classification, relation- and scan-based for usage-detail) before concluding a file is unused.
+
+**Resolved for User Story 4's pre-delete re-check**: rather than re-implementing this logic a third
+time in `MediaDeleteService`, its mandatory pre-delete re-check calls `GetUsagesAsync` directly (an
+item is still-unused only if it resolves zero usages) — so the ancestor-folder fix applies to the
+one place it matters most (actually preventing deletion) automatically, with no separately-maintained
+copy of the check to keep in sync.
+
 **Alternatives considered**:
 - *Relations only*: rejected as the sole mechanism — see gap above; unacceptable given the delete
   feature.

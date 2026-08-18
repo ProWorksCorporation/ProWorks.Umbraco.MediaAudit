@@ -113,12 +113,18 @@ Per plan.md's Project Structure — single Umbraco package project (RCL), not a 
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] Extend `GET /items` with `mediaTypeAlias`/`folderId` filters, `sort`/`sortDirection` (`name`/`sizeBytes`/`updateDate`), and paging in `MediaAuditApiController` + `MediaAuditService` per FR-007, FR-008 and contracts §GET /items
-- [ ] T033 [US3] Implement `GET /export` producing a CSV of the current filtered/sorted set in `MediaAuditApiController` per FR-009 and contracts §GET /export (shares `MediaAuditApiController.cs` with T032 — sequence after it, not parallel)
-- [ ] T034 [US3] Implement the `MediaFolder` listing service (for the folder filter dropdown) in `MediaAuditService` per data-model.md (shares `MediaAuditService.cs` with T032 — sequence after it, not parallel)
-- [ ] T035 [US3] Implement filter controls (status/type/folder) in `media-audit-dashboard.element.ts` per FR-007 (depends on T034)
-- [ ] T036 [US3] Implement sortable column headers in the results table in `media-audit-dashboard.element.ts` per FR-008
-- [ ] T037 [US3] Implement the Export action (triggers `GET /export` download) in `media-audit-dashboard.element.ts` per FR-009
+- [X] T032 [US3] Extend `GET /items` with `mediaTypeAlias`/`folderId` filters, `sort`/`sortDirection` (`name`/`sizeBytes`/`updateDate`), and paging in `MediaAuditApiController` + `MediaAuditService` per FR-007, FR-008 and contracts §GET /items — via new `MediaAuditItemsQuery`/`MediaAuditItemsResult` models
+- [X] T033 [US3] Implement `GET /export` producing a CSV of the current filtered/sorted set in `MediaAuditApiController` per FR-009 and contracts §GET /export (shares `MediaAuditApiController.cs` with T032 — sequence after it, not parallel)
+- [X] T034 [US3] Implement the `MediaFolder` listing service (for the folder filter dropdown) in `MediaAuditService` per data-model.md (shares `MediaAuditService.cs` with T032 — sequence after it, not parallel) — plus a new `GET /folders` endpoint and (beyond the original task scope) a `GET /media-types` endpoint for the type-filter dropdown's options; both added to contracts/media-audit-api.md since neither was in the original contract draft
+- [X] T035 [US3] Implement filter controls (status/type/folder) in `media-audit-dashboard.element.ts` per FR-007 (depends on T034) — native `<select>` dropdowns; the status filter continues to use the US2-era summary-pill toggle rather than a third dropdown
+- [X] T036 [US3] Implement sortable column headers in the results table in `media-audit-dashboard.element.ts` per FR-008 — Name/Size/Last modified headers toggle sort field/direction with a ▲/▼ indicator
+- [X] T037 [US3] Implement the Export action (triggers `GET /export` download) in `media-audit-dashboard.element.ts` per FR-009 — via an authenticated Blob download (a plain `<a href>` can't carry the required Bearer token)
+
+**Extra correctness fixes made while implementing this phase (not originally scoped, found along the way)**:
+- Folders are now excluded from audit classification entirely (`ExecuteAuditAsync`) — they were previously showing up as permanently-"Unused" clutter, resolving the spec.md edge case about folder classification.
+- A media item is now also classified "Used" if any *ancestor folder* is itself referenced (e.g. a gallery/slideshow block that picks a folder rather than each file) — both in bulk classification and in `GetUsagesAsync`. **Not yet applied to User Story 4's delete/purge pre-action re-check, since that doesn't exist yet — it MUST be when built.** See research.md §4 and spec.md's Edge Cases for the full writeup.
+- CSV export gained a `UsedOnPages` column (referencing content item names, relation-based only for speed) per user request; contracts/media-audit-api.md updated to match.
+- UI layout polish: Total/Used/Unused pills moved to sit left of the Type/Folder filter dropdowns in one row (`.filter-bar`), rather than stacked above them.
 
 **Checkpoint**: User Stories 1–3 all work independently.
 
@@ -132,21 +138,21 @@ Per plan.md's Project Structure — single Umbraco package project (RCL), not a 
 
 ### Implementation for User Story 4
 
-- [ ] T038 [P] [US4] Create `AddDeletionLogTablePlan` (`PackageMigrationPlan`) in `src/UmbracoMediaAudit/Migrations/AddDeletionLogTablePlan.cs` creating the `DeletionLogEntry` table per research.md §10 and data-model.md
-- [ ] T039 [P] [US4] Create the `DeletionLogEntry` model in `src/UmbracoMediaAudit/Models/DeletionLogEntry.cs` per data-model.md
-- [ ] T040 [US4] Register the migration plan's execution in `MediaAuditComposer.cs` (depends on T038)
-- [ ] T041 [US4] Implement `IDeletionLogService`/`DeletionLogService` in `src/UmbracoMediaAudit/Services/DeletionLogService.cs` — write exactly one entry per delete/purge batch (never per item, never zero even if fully skipped) and read paged history, per FR-019 (depends on T038, T039)
-- [ ] T042 [US4] Implement `MediaDeleteService` in `src/UmbracoMediaAudit/Services/MediaDeleteService.cs` — `IMediaService.MoveToRecycleBin` per selected item, with a fresh `MediaReferenceScanner` re-check immediately before each deletion and `NowReferenced` skip-reporting, per FR-014 and research.md §4–5
-- [ ] T043 [US4] Implement `MediaPurgeService` in `src/UmbracoMediaAudit/Services/MediaPurgeService.cs` — `IMediaService.Delete()` per selected item (never `EmptyRecycleBin()`), with a fresh `Trashed`-state re-check immediately before each purge and `NotTrashed` skip-reporting, per FR-018 and research.md §5
-- [ ] T044 [US4] Implement the shared admin-only permission-check helper in `MediaAuditApiController.cs` per FR-015
-- [ ] T045 [US4] Implement `POST /delete` wired to `MediaDeleteService` + `DeletionLogService`, returning `logEntryId` in `MediaAuditApiController.cs` per FR-014, FR-015, FR-019 and contracts §POST /delete (depends on T041, T042, T044)
-- [ ] T046 [US4] Implement `POST /purge` wired to `MediaPurgeService` + `DeletionLogService`, returning `logEntryId` in `MediaAuditApiController.cs` per FR-018, FR-015, FR-019 and contracts §POST /purge (depends on T041, T043, T044)
-- [ ] T047 [US4] Implement `GET /deletion-log` (admin-only, paged) in `MediaAuditApiController.cs` per FR-019 and contracts §GET /deletion-log (depends on T041, T044)
-- [ ] T048 [P] [US4] Create `media-audit-delete-confirm.element.ts` in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-014
-- [ ] T049 [P] [US4] Create `media-audit-purge-confirm.element.ts` — its own, more strongly-worded confirmation, distinct from delete's — in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-018
-- [ ] T050 [P] [US4] Create `media-audit-deletion-log.element.ts` (admin-only log view) in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-019
-- [ ] T051 [US4] Wire delete/purge/deletion-log controls to render only for administrators (hidden entirely, not just disabled, for non-admins) in `media-audit-dashboard.element.ts` per FR-015 (depends on T023, T048–T050)
-- [ ] T052 [US4] Implement `NowReferenced`/`NotTrashed` skip-reporting feedback in the delete/purge confirmation elements per the spec's race-condition edge cases (depends on T045, T046, T048, T049)
+- [X] T038 [P] [US4] Create `AddDeletionLogTablePlan` (`PackageMigrationPlan`) in `src/UmbracoMediaAudit/Migrations/AddDeletionLogTablePlan.cs` creating the `DeletionLogEntry` table per research.md §10 and data-model.md — fluent `Create.Table(...).WithColumn(...)` API (verified via reflection against the real assembly, not guessed), not an attribute-decorated DTO; confirmed running correctly against the live SQLite dev DB
+- [X] T039 [P] [US4] Create the `DeletionLogEntry` model in `src/UmbracoMediaAudit/Models/DeletionLogEntry.cs` per data-model.md
+- [X] T040 [US4] Register the migration plan's execution in `MediaAuditComposer.cs` (depends on T038) — actually `UmbracoMediaAuditApiComposer.cs` (the project's real composer filename) via `builder.PackageMigrationPlans().Add<>()`
+- [X] T041 [US4] Implement `IDeletionLogService`/`DeletionLogService` in `src/UmbracoMediaAudit/Services/DeletionLogService.cs` — write exactly one entry per delete/purge batch (never per item, never zero even if fully skipped) and read paged history, per FR-019 (depends on T038, T039) — plain attribute-free NPoco row type, matched via explicit SQL column aliases and the explicit-table-name `Insert()` overload
+- [X] T042 [US4] Implement `MediaDeleteService` in `src/UmbracoMediaAudit/Services/MediaDeleteService.cs` — `IMediaService.MoveToRecycleBin` per selected item, with a fresh re-check immediately before each deletion and `NowReferenced` skip-reporting, per FR-014 and research.md §4–5 — **the pre-delete re-check reuses `IMediaAuditService.GetUsagesAsync` rather than re-implementing relation+scan+ancestor-folder logic separately**, so the gallery/slideshow folder-reference fix from User Story 3 (research.md §4 addendum, [[media-audit-folder-references]]) automatically applies here too, resolving that fix's flagged follow-up
+- [X] T043 [US4] Implement `MediaPurgeService` in `src/UmbracoMediaAudit/Services/MediaPurgeService.cs` — `IMediaService.Delete()` per selected item (never `EmptyRecycleBin()`), with a fresh `Trashed`-state re-check immediately before each purge and `NotTrashed` skip-reporting, per FR-018 and research.md §5
+- [X] T044 [US4] Implement the shared admin-only permission-check helper in `MediaAuditApiController.cs` per FR-015 — `[Authorize(Policy = AuthorizationPolicies.RequireAdminAccess)]` stacked on top of the base controller's Media-section-access policy (ASP.NET Core combines multiple `[Authorize]` attributes with AND semantics, returning 403 for an authenticated-but-non-admin caller) rather than a hand-written check
+- [X] T045 [US4] Implement `POST /delete` wired to `MediaDeleteService` + `DeletionLogService`, returning `logEntryId` in `MediaAuditApiController.cs` per FR-014, FR-015, FR-019 and contracts §POST /delete (depends on T041, T042, T044)
+- [X] T046 [US4] Implement `POST /purge` wired to `MediaPurgeService` + `DeletionLogService`, returning `logEntryId` in `MediaAuditApiController.cs` per FR-018, FR-015, FR-019 and contracts §POST /purge (depends on T041, T043, T044)
+- [X] T047 [US4] Implement `GET /deletion-log` (admin-only, paged) in `MediaAuditApiController.cs` per FR-019 and contracts §GET /deletion-log (depends on T041, T044)
+- [X] T048 [P] [US4] Create `media-audit-delete-confirm.element.ts` in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-014
+- [X] T049 [P] [US4] Create `media-audit-purge-confirm.element.ts` — its own, more strongly-worded confirmation, distinct from delete's — in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-018 — requires ticking an explicit "I understand this is permanent" checkbox before the button enables, not just a click
+- [X] T050 [P] [US4] Create `media-audit-deletion-log.element.ts` (admin-only log view) in `src/UmbracoMediaAudit/Client/src/dashboard/` per FR-019 — **also where purge is initiated from**: each `Delete`-type log entry gets its own Purge action against exactly that entry's items, since "specific items previously deleted via FR-014" (FR-018's own wording) are precisely a Delete entry's item list, so no separate Recycle-Bin item-picker UI was needed
+- [X] T051 [US4] Wire delete/purge/deletion-log controls to render only for administrators (hidden entirely, not just disabled, for non-admins) in `media-audit-dashboard.element.ts` per FR-015 (depends on T023, T048–T050) — admin status is *derived*, not read from Umbraco's client-side user context: the dashboard calls `GET /deletion-log` once on load and treats a 403 (`MediaAuditApiError.status`) as "not admin," reusing the server's own already-correct authorization instead of independently re-deriving admin status client-side
+- [X] T052 [US4] Implement `NowReferenced`/`NotTrashed` skip-reporting feedback in the delete/purge confirmation elements per the spec's race-condition edge cases (depends on T045, T046, T048, T049) — surfaced via notification toasts distinguishing "N deleted/purged, M skipped" from a plain success message
 
 **Checkpoint**: All four user stories are independently functional. Feature-complete per spec.md.
 

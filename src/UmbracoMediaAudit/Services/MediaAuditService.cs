@@ -58,15 +58,127 @@ public sealed class MediaAuditService : IMediaAuditService
         return Task.FromResult(GetCurrentAudit());
     }
 
-    public IReadOnlyList<MediaAuditItem> GetItems(MediaUsageStatus? status = null)
+    /// <inheritdoc />
+    public MediaAuditItemsResult GetItems(MediaAuditItemsQuery query)
+    {
+        var filtered = FilterAndSort(query);
+        var pageSize = Math.Clamp(query.PageSize, 1, 200);
+        var page = Math.Max(query.Page, 1);
+
+        return new MediaAuditItemsResult
+        {
+            Items = filtered.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            TotalItems = filtered.Count,
+        };
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<MediaAuditItem> GetExportItems(MediaAuditItemsQuery query) => FilterAndSort(query);
+
+    /// <inheritdoc />
+    public IReadOnlyList<MediaFolder> GetFolders()
+    {
+        var folders = new List<MediaFolder>();
+        long pageIndex = 0;
+        long total;
+        do
+        {
+            var page = _mediaService
+                .GetPagedDescendants(CoreConstants.System.Root, pageIndex, PageSize, out total)
+                .Where(m => m.ContentType.Alias == CoreConstants.Conventions.MediaTypes.Folder)
+                .ToList();
+
+            folders.AddRange(page.Select(f => new MediaFolder
+            {
+                Id = f.Id,
+                Name = f.Name ?? $"(folder {f.Id})",
+                Path = ResolveFullPath(f),
+                ParentId = f.ParentId == CoreConstants.System.Root ? null : f.ParentId,
+            }));
+
+            pageIndex++;
+        } while (pageIndex * PageSize < total);
+
+        return folders;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> GetUsedOnPageNames(int mediaId)
+    {
+        var media = _mediaService.GetById(mediaId);
+        if (media is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var contentIds = GetRelatedContentIds(mediaId);
+        if (contentIds.Count == 0)
+        {
+            contentIds = GetAncestorFolderRelatedContentIds(media);
+        }
+
+        return contentIds
+            .Select(id => _contentService.GetById(id)?.Name)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Select(name => name!)
+            .OrderBy(name => name)
+            .ToList();
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<MediaTypeOption> GetMediaTypeOptions()
     {
         lock (_lock)
         {
-            return status is null
-                ? _items.ToList()
-                : _items.Where(i => i.UsageStatus == status).ToList();
+            return _items
+                .GroupBy(i => i.MediaTypeAlias)
+                .Select(g => new MediaTypeOption { Alias = g.Key, Name = g.First().MediaTypeName })
+                .OrderBy(o => o.Name)
+                .ToList();
         }
     }
+
+    /// <summary>Applies GET /items'/GET /export's shared status/type/folder filter and sort (FR-007, FR-008).</summary>
+    private List<MediaAuditItem> FilterAndSort(MediaAuditItemsQuery query)
+    {
+        IEnumerable<MediaAuditItem> items;
+        lock (_lock)
+        {
+            items = _items.ToList();
+        }
+
+        if (query.Status is not null)
+        {
+            items = items.Where(i => i.UsageStatus == query.Status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.MediaTypeAlias))
+        {
+            items = items.Where(i => i.MediaTypeAlias == query.MediaTypeAlias);
+        }
+
+        if (query.FolderId is not null)
+        {
+            items = items.Where(i => i.FolderId == query.FolderId);
+        }
+
+        items = query.Sort switch
+        {
+            MediaAuditSortField.SizeBytes => OrderBy(items, i => i.SizeBytes ?? 0, query.SortDirection),
+            MediaAuditSortField.UpdateDate => OrderBy(items, i => i.UpdateDate, query.SortDirection),
+            _ => OrderBy(items, i => i.Name, query.SortDirection),
+        };
+
+        return items.ToList();
+    }
+
+    private static IOrderedEnumerable<MediaAuditItem> OrderBy<TKey>(
+        IEnumerable<MediaAuditItem> items,
+        Func<MediaAuditItem, TKey> keySelector,
+        MediaAuditSortDirection direction) =>
+        direction == MediaAuditSortDirection.Desc
+            ? items.OrderByDescending(keySelector)
+            : items.OrderBy(keySelector);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<MediaUsageReference>?> GetUsagesAsync(Guid mediaKey, CancellationToken cancellationToken = default)
@@ -84,7 +196,26 @@ public sealed class MediaAuditService : IMediaAuditService
         // attributes *which* culture/property holds the reference, since IRelation itself carries no
         // culture/property information. It naturally covers every content item, not just
         // relation-linked ones, so it also catches anything the relation layer missed.
-        var scanResults = await _scanner.FindReferencesAsync(media, cancellationToken);
+        var scanResults = (await _scanner.FindReferencesAsync(media, cancellationToken)).ToList();
+
+        // Gallery/slideshow pattern (see GetAncestorFolderRelatedContentIds's doc comment): nothing
+        // found directly on the item itself - check whether a folder it lives in is what's actually
+        // referenced, for both signals, before concluding this "Used" item resolves to zero usages.
+        if (relationContentIds.Count == 0 && scanResults.Count == 0)
+        {
+            relationContentIds = GetAncestorFolderRelatedContentIds(media);
+
+            foreach (var ancestorId in GetAncestorIds(media))
+            {
+                var ancestor = _mediaService.GetById(ancestorId);
+                if (ancestor is null)
+                {
+                    continue;
+                }
+
+                scanResults.AddRange(await _scanner.FindReferencesAsync(ancestor, cancellationToken));
+            }
+        }
 
         var results = new List<MediaUsageReference>();
         var attributedContentIds = new HashSet<int>();
@@ -138,6 +269,30 @@ public sealed class MediaAuditService : IMediaAuditService
             .Select(r => r.ParentId)
             .ToHashSet();
 
+    /// <summary>
+    /// A content property can reference a media *folder* itself (e.g. a gallery/slideshow block
+    /// that picks a folder and renders whatever's inside it) rather than each child file
+    /// individually - Umbraco then records the relation on the folder node, never on its children.
+    /// Without this, every file in such a folder would be misclassified "Unused" (and eligible for
+    /// delete) despite being genuinely rendered on the site.
+    ///
+    /// IMPORTANT: this same ancestor-folder check must be applied everywhere else "is this media
+    /// used" gets decided - it's applied here (bulk classification) and in GetUsagesAsync (usage
+    /// detail), but when User Story 4's delete/purge pre-action re-check is built, it MUST also call
+    /// this (or reuse it), or a folder-referenced file could still be deleted despite showing "Used"
+    /// everywhere else in the UI.
+    /// </summary>
+    private HashSet<int> GetAncestorFolderRelatedContentIds(IMedia media)
+    {
+        var result = new HashSet<int>();
+        foreach (var ancestorId in GetAncestorIds(media))
+        {
+            result.UnionWith(GetRelatedContentIds(ancestorId));
+        }
+
+        return result;
+    }
+
     private static MediaUsageReference WithDetectionSource(MediaUsageReference usage, MediaUsageDetectionSource source) => new()
     {
         ContentId = usage.ContentId,
@@ -165,6 +320,11 @@ public sealed class MediaAuditService : IMediaAuditService
 
                 var page = _mediaService
                     .GetPagedDescendants(CoreConstants.System.Root, pageIndex, PageSize, out total)
+                    // Folders are organizational containers, not audited files - per spec.md's edge
+                    // case ("is the folder itself flagged, or only leaf files?"), only leaf files are
+                    // classified. Without this, every folder shows up as permanently "Unused" clutter,
+                    // since content references individual media items, never the containing folder.
+                    .Where(m => m.ContentType.Alias != CoreConstants.Conventions.MediaTypes.Folder)
                     .ToList();
 
                 items.AddRange(page.Select(ClassifyMedia));
@@ -211,14 +371,20 @@ public sealed class MediaAuditService : IMediaAuditService
     /// <summary>
     /// Relation-based classification (research.md §4): a media item is "Used" if Umbraco's tracked
     /// references (IRelationService, populated via IDataValueReference at save time) record at least
-    /// one "relatedMedia" relation pointing at it. This is the fast primary signal used for a full
-    /// audit run; the scan-based safety net (IMediaReferenceScanner) supplements this per-item on
-    /// demand (usage detail, pre-delete/pre-purge re-check) rather than on every item in bulk, to hit
-    /// the SC-002 performance target.
+    /// one "relatedMedia" relation pointing at it, OR (see <see cref="GetAncestorFolderRelatedContentIds"/>)
+    /// pointing at a folder it lives in. This is the fast primary signal used for a full audit run;
+    /// the scan-based safety net (IMediaReferenceScanner) supplements this per-item on demand (usage
+    /// detail, pre-delete/pre-purge re-check) rather than on every item in bulk, to hit the SC-002
+    /// performance target.
     /// </summary>
     private MediaAuditItem ClassifyMedia(IMedia media)
     {
         var relatedContentIds = GetRelatedContentIds(media.Id);
+        if (relatedContentIds.Count == 0)
+        {
+            relatedContentIds = GetAncestorFolderRelatedContentIds(media);
+        }
+
         var isUsed = relatedContentIds.Count > 0;
 
         return new MediaAuditItem
@@ -227,6 +393,7 @@ public sealed class MediaAuditService : IMediaAuditService
             Key = media.Key,
             Name = media.Name ?? $"(media {media.Id})",
             MediaTypeAlias = media.ContentType.Alias,
+            MediaTypeName = media.ContentType.Name ?? media.ContentType.Alias,
             Extension = media.GetValue<string>(CoreConstants.Conventions.Media.Extension),
             SizeBytes = GetSizeBytes(media),
             Path = ResolveFolderPath(media),
@@ -247,18 +414,21 @@ public sealed class MediaAuditService : IMediaAuditService
         return value.HasValue ? value.Value : null;
     }
 
-    /// <summary>
-    /// Resolves IMedia.Path's comma-separated id list (e.g. "-1,1234,5678") into a human-readable
-    /// folder path (FR-006, FR-007) - resolves the G2 gap flagged in /speckit-analyze.
-    /// </summary>
-    private string ResolveFolderPath(IMedia media)
-    {
-        var ancestorIds = media.Path
+    /// <summary>Resolves IMedia.Path's comma-separated id list (e.g. "-1,1234,5678") into just the ancestor folder ids, nearest-parent-last excluded, root excluded.</summary>
+    private static List<int> GetAncestorIds(IMedia media) =>
+        media.Path
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(int.Parse)
             .Where(id => id != CoreConstants.System.Root && id != media.Id)
             .ToList();
 
+    /// <summary>
+    /// Resolves IMedia.Path's comma-separated id list into a human-readable folder path (FR-006,
+    /// FR-007) - resolves the G2 gap flagged in /speckit-analyze.
+    /// </summary>
+    private string ResolveFolderPath(IMedia media)
+    {
+        var ancestorIds = GetAncestorIds(media);
         if (ancestorIds.Count == 0)
         {
             return "/";
@@ -266,6 +436,13 @@ public sealed class MediaAuditService : IMediaAuditService
 
         var names = ancestorIds.Select(id => _mediaService.GetById(id)?.Name ?? $"#{id}");
         return "/" + string.Join("/", names);
+    }
+
+    /// <summary>Like <see cref="ResolveFolderPath"/>, but includes the item itself - used for a folder's own breadcrumb path (GetFolders), not an item's containing-folder path.</summary>
+    private string ResolveFullPath(IMedia media)
+    {
+        var parentPath = ResolveFolderPath(media);
+        return parentPath == "/" ? $"/{media.Name}" : $"{parentPath}/{media.Name}";
     }
 
     private static AuditRun Clone(AuditRun run) => new()
