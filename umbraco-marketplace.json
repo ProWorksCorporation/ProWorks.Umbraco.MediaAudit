@@ -1,7 +1,22 @@
 {
+  "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
+  "Title": "Umbraco Media Audit",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
+  "PackageType": "Package",
+  "AuthorDetails": {
+    "Name": "ProWorks Corporation",
+    "Description": "ProWorks Corporation is an Umbraco Platinum Partner and Contributing Partner with a long-standing commitment to the Umbraco community. As a web design and development agency, ProWorks helps bridge the gap between marketing and IT teams, and delivers creative solutions to complex challenges.",
+    "Url": "https://www.proworks.com/",
+    "ImageUrl": "https://github.com/ProWorksCorporation.png",
+    "Contributors": [],
+    "SyncContributorsFromRepository": false
+  },
+  "LicenseTypes": ["Free"],
+  "LookingForContributors": false,
+  "LookingForMaintainer": false,
   "DocumentationUrl": "https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/blob/main/README.md",
+  "DiscussionForumUrl": "https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/issues",
   "IssueTrackerUrl": "https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/issues",
   "Tags": ["media", "media library", "cleanup", "housekeeping", "audit", "backoffice dashboard"]
 }
