@@ -26,17 +26,19 @@ public sealed class AddDeletionLogTablePlan : PackageMigrationPlan
 }
 
 /// <summary>The actual schema change for <see cref="AddDeletionLogTablePlan"/>'s one migration step.</summary>
-internal sealed class AddDeletionLogTableMigration : MigrationBase
+internal sealed class AddDeletionLogTableMigration : AsyncMigrationBase
 {
     public AddDeletionLogTableMigration(IMigrationContext context) : base(context)
     {
     }
 
-    protected override void Migrate()
+    // MigrationBase (sync Migrate()) is obsolete, scheduled for removal in Umbraco 18 - this table
+    // creation has no genuinely async work, so it's just wrapped in Task.CompletedTask.
+    protected override Task MigrateAsync()
     {
         if (TableExists(AddDeletionLogTablePlan.TableName))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         Create.Table(AddDeletionLogTablePlan.TableName)
@@ -49,5 +51,7 @@ internal sealed class AddDeletionLogTableMigration : MigrationBase
             .WithColumn("items").AsString().Nullable()
             .WithColumn("skippedCount").AsInt32().NotNullable()
             .Do();
+
+        return Task.CompletedTask;
     }
 }

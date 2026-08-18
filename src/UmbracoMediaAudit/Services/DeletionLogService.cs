@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Umbraco.Cms.Core.Scoping;
+using Umbraco.Cms.Infrastructure.Scoping;
 using UmbracoMediaAudit.Migrations;
 using UmbracoMediaAudit.Models;
 
@@ -80,9 +80,12 @@ public sealed class DeletionLogService : IDeletionLogService
     /// <summary>
     /// Plain, attribute-free row shape for NPoco - matched to <see cref="AddDeletionLogTablePlan"/>'s
     /// columns via explicit SQL aliases (GetPagedHistory) or the explicit table/PK-name overload of
-    /// Insert (LogAction), rather than [TableName]/[Column] attributes.
+    /// Insert (LogAction), rather than [TableName]/[Column] attributes. Internal rather than private
+    /// so unit tests can set up Moq expectations against IUmbracoDatabase's generic Insert&lt;T&gt;/
+    /// Fetch&lt;T&gt; calls (see InternalsVisibleTo in AssemblyInfo.cs) - otherwise this type isn't
+    /// nameable outside this class at all, and those generic methods can't be mocked without it.
     /// </summary>
-    private sealed class DeletionLogRow
+    internal sealed class DeletionLogRow
     {
         public int Id { get; set; }
         public DateTime OccurredAt { get; set; }
