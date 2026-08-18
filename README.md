@@ -1,18 +1,10 @@
 # Umbraco Media Audit
 
-A backoffice dashboard for Umbraco v17 that audits every item in the media library, tells you
-exactly which pages reference each "Used" item, and lets an administrator safely clean up the rest —
-with a batch-level accountability log for every delete and purge.
+This package audits your Umbraco CMS (v17+) media library right from the backoffice — classifying
+every item as Used or Unused, showing exactly which pages reference it, and giving administrators
+safe, auditable tools to clean up the rest.
 
-## Why
-
-Media libraries accumulate cruft: old campaign images, superseded PDFs, test uploads nobody remembered
-to remove. Finding out what's actually still referenced usually means grepping a database export or
-just guessing. This package answers that question from inside the backoffice, using Umbraco's own
-reference-tracking as the source of truth, and turns the answer into an actionable, auditable cleanup
-workflow.
-
-## Features
+## Key Features
 
 - **Used / Unused classification** for every media item — images, documents, files — based on
   Umbraco's own content-relation tracking, checked across every configured language.
