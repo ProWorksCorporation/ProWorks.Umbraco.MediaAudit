@@ -103,8 +103,6 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
     [Test]
     public async Task Media_inside_a_referenced_ancestor_folder_is_classified_Used_via_folder_propagation()
     {
-        // Gallery/slideshow pattern (research.md §4 addendum): a page picks the *folder*, not each
-        // file inside it - Umbraco records the relation on the folder node only.
         var galleryFolder = MediaService.CreateMediaWithIdentity("Gallery", -1, CoreConstants.Conventions.MediaTypes.Folder);
         var imageInGallery = MediaService.CreateMediaWithIdentity("gallery-photo.jpg", galleryFolder.Id, CoreConstants.Conventions.MediaTypes.Image);
 
@@ -117,9 +115,6 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
         Assert.That(galleryImageUsages, Is.Not.Null);
         Assert.That(galleryImageUsages!.Single().ContentName, Is.EqualTo("Slideshow Page"));
 
-        // Folders are organizational containers, never audited as their own item (research.md §folder
-        // exclusion) - unaffected by the background-thread relation-visibility limitation noted above,
-        // since it's a plain ContentType-alias check, not a relation lookup.
         var items = GetAllItems();
         Assert.That(items.Any(i => i.Id == galleryFolder.Id), Is.False);
     }

@@ -26,7 +26,6 @@ describe("media-audit-delete-confirm", () => {
     const text = el.shadowRoot!.textContent!.toLowerCase();
     expect(text).to.contain("recycle bin");
     expect(text).to.contain("not permanently removed");
-    // Distinct from media-audit-purge-confirm's deliberately stronger, irreversible-action wording.
     expect(text).to.not.contain("cannot be undone");
   });
 

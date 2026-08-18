@@ -32,8 +32,6 @@ internal sealed class AddDeletionLogTableMigration : AsyncMigrationBase
     {
     }
 
-    // MigrationBase (sync Migrate()) is obsolete, scheduled for removal in Umbraco 18 - this table
-    // creation has no genuinely async work, so it's just wrapped in Task.CompletedTask.
     protected override Task MigrateAsync()
     {
         if (TableExists(AddDeletionLogTablePlan.TableName))

@@ -90,7 +90,7 @@ describe("media-audit-dashboard", () => {
     expect(rows[0].textContent).to.contain("hero.jpg");
     expect(rows[0].textContent).to.contain("2.0 KB");
     expect(rows[1].textContent).to.contain("old.pdf");
-    expect(rows[1].textContent).to.contain("—"); // null sizeBytes formats as an em dash, not "null"
+    expect(rows[1].textContent).to.contain("—");
   });
 
   it("shows a message instead of a table when there are no matching items", async () => {
@@ -117,7 +117,6 @@ describe("media-audit-dashboard", () => {
   it("expands an accordion detail row on click, showing <media-audit-detail> only for Used items", async () => {
     const usedItem = makeItem({ name: "used.jpg", usageStatus: "Used" });
     const unusedItem = makeItem({ name: "unused.jpg", usageStatus: "Unused" });
-    // media-audit-detail fetches on its own when expanded - stub it so it doesn't error-log noisily.
     restoreFetch = stubFetch(() => jsonResponse({ mediaKey: "x", usages: [] }));
 
     const el = await dashboardFixture({ _items: [usedItem, unusedItem], _totalItems: 2 });
@@ -127,7 +126,7 @@ describe("media-audit-dashboard", () => {
     await el.updateComplete;
     expect(el.shadowRoot!.querySelector("media-audit-detail")).to.exist;
 
-    (rows[0] as HTMLElement).click(); // toggle back off
+    (rows[0] as HTMLElement).click();
     await el.updateComplete;
     (rows.find((r) => r.textContent?.includes("unused.jpg")) as HTMLElement).click();
     await el.updateComplete;
@@ -150,7 +149,7 @@ describe("media-audit-dashboard", () => {
     expect(el.shadowRoot!.querySelector(".grid.has-checkbox")).to.exist;
     const deleteButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.includes("Delete Selected"));
     expect(deleteButton).to.exist;
-    expect(deleteButton!.hasAttribute("disabled")).to.be.true; // nothing selected yet
+    expect(deleteButton!.hasAttribute("disabled")).to.be.true;
 
     const rowCheckbox = el.shadowRoot!.querySelector(".grid-row:not(.grid-header) uui-checkbox")!;
     await clickUuiCheckbox(rowCheckbox);
@@ -194,6 +193,6 @@ describe("media-audit-dashboard", () => {
     expect(deleteBody).to.deep.equal({ mediaKeys: [item.key] });
     expect(el._selectedForDelete.size).to.equal(0);
     expect(el.shadowRoot!.querySelector("media-audit-delete-confirm")).to.not.exist;
-    expect(getItemsCallCount).to.equal(1); // reloaded after delete
+    expect(getItemsCallCount).to.equal(1);
   });
 });

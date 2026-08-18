@@ -79,8 +79,6 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
                 UmbracoConstants.PropertyEditors.Aliases.TextBox,
                 "Umb.PropertyEditorUi.TextBox");
 
-        // Element type used inside the Block List - must exist before the Block List data type
-        // below can reference its key.
         var testimonialBlock = GetOrCreateContentType(
             alias: "auditTestTestimonialBlock",
             name: "Audit Test - Testimonial Block",
@@ -150,9 +148,6 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
             throw new InvalidOperationException($"Property editor '{editorAlias}' is not registered.");
         }
 
-        // EditorUiAlias is the modern (v14+) backoffice's key for which UI component renders this
-        // property - without it the property shows "The configured property editor UI could not be
-        // found" even though the server-side Editor alias is perfectly valid.
         var dataType = new DataType(editor, _configJsonSerializer, -1) { Name = name, EditorUiAlias = editorUiAlias };
         if (configure is not null)
         {

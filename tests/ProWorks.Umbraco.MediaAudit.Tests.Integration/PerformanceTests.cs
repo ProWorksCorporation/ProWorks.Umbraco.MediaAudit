@@ -56,7 +56,7 @@ public class PerformanceTests : MediaAuditIntegrationTestBase
             }
 
             await Task.Delay(200);
-        } while (++attempts < 600); // up to 120s of polling headroom before the test gives up waiting
+        } while (++attempts < 600);
         auditStopwatch.Stop();
 
         TestContext.Out.WriteLine($"Audit of {run.TotalScanned} items completed in {auditStopwatch.Elapsed.TotalSeconds:F1}s (SC-002 budget: {SC002LimitSeconds}s). Status: {run.Status}.");

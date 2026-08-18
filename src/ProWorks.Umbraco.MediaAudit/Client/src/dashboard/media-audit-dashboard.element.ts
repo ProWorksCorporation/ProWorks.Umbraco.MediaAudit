@@ -22,7 +22,6 @@ import {
   type MediaTypeOption,
   type MediaUsageStatus,
 } from "../api/media-audit.repository.js";
-// Side-effect imports - register the custom elements used below.
 import "./media-audit-detail.element.js";
 import "./media-audit-delete-confirm.element.js";
 import "./media-audit-deletion-log.element.js";
@@ -119,8 +118,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
     this.consumeContext(UMB_NOTIFICATION_CONTEXT, (context) => {
       this.#notificationContext = context;
     });
-    // Loading is deferred until the auth context arrives (see setAuthContext in
-    // media-audit.repository.ts) so the first request carries a Bearer token instead of 401ing.
     this.consumeContext(UMB_AUTH_CONTEXT, (context) => {
       if (!context) return;
       setAuthContext(context);
@@ -283,9 +280,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
       this._deleteConfirmOpen = false;
       this._selectedForDelete = new Set();
 
-      // Skip-reporting feedback (spec.md race-condition edge case): an item that became referenced
-      // since the last audit is skipped, not deleted or errored as a whole batch - surface that
-      // distinctly rather than a generic "done".
       if (result.skipped.length > 0) {
         this.#notificationContext?.peek("warning", {
           data: {
@@ -472,7 +466,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
   }
 
   #renderSummary(run: AuditRun) {
-    // Doubles as the status filter (a minimal one - see class doc) - click a pill to filter to it.
     const pill = (status: MediaUsageStatus | undefined, color: "default" | "positive" | "warning", label: string) => html`
       <uui-tag
         class="filter-pill"
@@ -530,8 +523,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
       return html`<p>No ${(this._statusFilter ?? "").toLowerCase() || "matching"} media found.</p>`;
     }
 
-    // Delete is only offered for "Unused" items (FR-014) and only to admins (FR-015) - hidden
-    // entirely, not just disabled, for everyone else.
     const showCheckboxes = this._isAdmin && this._statusFilter === "Unused";
     const allSelected = showCheckboxes && this._items.length > 0 && this._items.every((item) => this._selectedForDelete.has(item.key));
     const someSelected = showCheckboxes && !allSelected && this._items.some((item) => this._selectedForDelete.has(item.key));
@@ -647,8 +638,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
 
       .filter-bar {
         display: flex;
-        /* The pills have no label above them (unlike the Type/Folder dropdowns), so aligning tops
-           leaves them sitting higher than the dropdowns themselves - align bottoms instead. */
         align-items: flex-end;
         justify-content: space-between;
         flex-wrap: wrap;
@@ -723,7 +712,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
         font-size: 0.7em;
       }
 
-      /* Hand-rolled table (see class doc for why this isn't uui-table). */
       .grid {
         display: grid;
         grid-template-columns: 2fr 1fr 100px 2fr 160px 80px;
@@ -733,7 +721,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
         overflow: hidden;
       }
 
-      /* Extra leading checkbox column - only present for admins viewing "Unused" (User Story 4). */
       .grid.has-checkbox {
         grid-template-columns: 40px 2fr 1fr 100px 2fr 160px 80px;
       }
@@ -760,10 +747,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
         white-space: normal;
       }
 
-      /* :not(.selected) matters here, not just style - ":hover" gives this selector higher
-         specificity than ".grid-row.selected" below, so without it, hovering a selected row would
-         win the background-color fight (flipping navy back to light gray) while the selected
-         row's white text stays (untouched by this rule) - invisible white-on-light-gray text. */
       .grid-row:not(.grid-header):not(.selected):hover .grid-cell {
         cursor: pointer;
         background-color: var(--uui-color-surface-emphasis, #f3f3f5);

@@ -51,8 +51,6 @@ public sealed class MediaAuditService : IMediaAuditService
             _currentRun = new AuditRun { Status = AuditRunStatus.Running };
         }
 
-        // Fire-and-forget on a background thread so the API request returns immediately (FR-012) -
-        // the client polls GET /summary for completion (contracts §POST /run).
         _ = Task.Run(() => ExecuteAuditAsync(cancellationToken), cancellationToken);
 
         return Task.FromResult(GetCurrentAudit());
@@ -86,8 +84,6 @@ public sealed class MediaAuditService : IMediaAuditService
             var page = _mediaService
                 .GetPagedDescendants(CoreConstants.System.Root, pageIndex, PageSize, out total)
                 .Where(m => m.ContentType.Alias == CoreConstants.Conventions.MediaTypes.Folder)
-                // See the matching exclusion in ExecuteAuditAsync - GetPagedDescendants(Root, ...)
-                // includes trashed items, so a trashed folder would otherwise leak into the filter.
                 .Where(m => !m.Trashed)
                 .ToList();
 
@@ -192,18 +188,10 @@ public sealed class MediaAuditService : IMediaAuditService
             return null;
         }
 
-        // Authoritative "is it used, and by which content items" signal (research.md §4).
         var relationContentIds = GetRelatedContentIds(media.Id);
 
-        // Editor-agnostic per-property/culture scan (research.md §4, §8) - this is what actually
-        // attributes *which* culture/property holds the reference, since IRelation itself carries no
-        // culture/property information. It naturally covers every content item, not just
-        // relation-linked ones, so it also catches anything the relation layer missed.
         var scanResults = (await _scanner.FindReferencesAsync(media, cancellationToken)).ToList();
 
-        // Gallery/slideshow pattern (see GetAncestorFolderRelatedContentIds's doc comment): nothing
-        // found directly on the item itself - check whether a folder it lives in is what's actually
-        // referenced, for both signals, before concluding this "Used" item resolves to zero usages.
         if (relationContentIds.Count == 0 && scanResults.Count == 0)
         {
             relationContentIds = GetAncestorFolderRelatedContentIds(media);
@@ -231,16 +219,9 @@ public sealed class MediaAuditService : IMediaAuditService
                 attributedContentIds.Add(usage.ContentId);
             }
 
-            // A relation is the authoritative "used" signal even when the scan also independently
-            // matched the same content item - report it as Relation rather than Scan in that case.
             results.Add(isRelationConfirmed ? WithDetectionSource(usage, MediaUsageDetectionSource.Relation) : usage);
         }
 
-        // A relation exists for a content item the scan found no textual match in (e.g. a
-        // property/editor whose stored value doesn't literally contain the media's GUID/path). Still
-        // surface it - without per-property/culture attribution - rather than silently dropping it;
-        // if the content itself no longer resolves (stale relation to deleted content), it's skipped,
-        // which is exactly the data-integrity condition callers must handle (see interface doc).
         foreach (var contentId in relationContentIds.Except(attributedContentIds))
         {
             var content = _contentService.GetById(contentId);
@@ -323,15 +304,7 @@ public sealed class MediaAuditService : IMediaAuditService
 
                 var page = _mediaService
                     .GetPagedDescendants(CoreConstants.System.Root, pageIndex, PageSize, out total)
-                    // Folders are organizational containers, not audited files - per spec.md's edge
-                    // case ("is the folder itself flagged, or only leaf files?"), only leaf files are
-                    // classified. Without this, every folder shows up as permanently "Unused" clutter,
-                    // since content references individual media items, never the containing folder.
                     .Where(m => m.ContentType.Alias != CoreConstants.Conventions.MediaTypes.Folder)
-                    // GetPagedDescendants(Root, ...) turns out to include already-trashed items too
-                    // (confirmed by a real trashed item showing up in the audit with a Recycle Bin
-                    // folder path) - exclude them explicitly. A trashed item isn't "unused," it's
-                    // already deleted; it belongs in the deletion log/Recycle Bin, not this list.
                     .Where(m => !m.Trashed)
                     .ToList();
 
@@ -361,8 +334,6 @@ public sealed class MediaAuditService : IMediaAuditService
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // T060 - Failed audit-run state handling (spec.md edge case): surface the error instead
-            // of silently leaving stale results or an indefinite "Running" state.
             lock (_lock)
             {
                 _currentRun = new AuditRun

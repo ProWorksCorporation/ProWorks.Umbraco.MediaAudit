@@ -1,22 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: (template, unratified) → 1.0.0
-- Modified principles: n/a (initial ratification)
+- Version change: 1.0.0 → 1.1.0
+- Modified principles: n/a
 - Added sections:
-  - Core Principles: I. Umbraco Package & Platform Standards
-  - Core Principles: II. Documentation-Driven, Verified Assumptions (NON-NEGOTIABLE)
-  - Core Principles: III. Backoffice UI Consistency (UUI, Web Components, Lit, TypeScript)
-  - Core Principles: IV. Standardized Build Tooling (Vite)
-  - Technology Stack Requirements
-  - Development Workflow & Quality Gates
-  - Governance
-- Removed sections: none (first concrete ratification of a previously placeholder-only file)
+  - Core Principles: V. Minimal, Self-Documenting Code Over Inline Commentary
+- Removed sections: none
 - Templates requiring updates:
-  - .specify/templates/plan-template.md ⚠ pending manual review (verify its Constitution Check section references these 4 principles by name)
+  - .specify/templates/plan-template.md ⚠ pending manual review (verify its Constitution Check section references this 5th principle by name)
   - .specify/templates/spec-template.md ✅ no principle-specific references, no changes required
-  - .specify/templates/tasks-template.md ⚠ pending manual review (verify task categorization allows for "docs/research" and "UUI/Lit component" task types)
-- Follow-up TODOs:
-  - TODO(RATIFICATION_DATE): Confirmed as the date this constitution was first adopted (2026-08-17). Update only if an earlier, unrecorded adoption date is later identified.
+  - .specify/templates/tasks-template.md ✅ no principle-specific references, no changes required
+- Follow-up TODOs: none
 -->
 
 # Umbraco.MediaAudit Constitution
@@ -70,6 +63,19 @@ amendment. Rationale: a single, standardized build tool keeps local development,
 package distribution reproducible and reduces the maintenance burden of supporting multiple
 toolchains for the same output.
 
+### V. Minimal, Self-Documenting Code Over Inline Commentary
+
+Code MUST be written to read clearly on its own, through clear naming and structure, rather than
+leaning on inline `//` comments to explain rationale, historical context, or "why this approach was
+chosen." Such rationale belongs in specs, plans, research notes, or commit messages, not scattered
+through source files where it goes stale silently as the reasoning changes but the comment doesn't.
+Public API surfaces (classes, interfaces, and public/exported methods) MUST still carry `///` XML doc
+comments in C# or `/** */` JSDoc blocks in TypeScript describing their contract, since these drive
+IntelliSense and generated documentation for consumers and are not "rationale" comments. Rationale:
+a comment explaining why decays the moment the underlying reasoning changes, misleading the next
+reader into trusting an explanation the code no longer matches; doc comments that drive tooling stay
+useful because the tooling forces them to be kept in view and in sync.
+
 ## Technology Stack Requirements
 
 - **Target platform**: Umbraco CMS v17 backoffice (server-side package + backoffice extension).
@@ -90,7 +96,9 @@ toolchains for the same output.
   resolved by silent assumption.
 - Code reviews (self- or peer-performed) MUST check for: adherence to Umbraco package standards,
   correct use of UUI/Lit/TypeScript for backoffice UI, Vite as the sole build tool for client assets,
-  and that any deviation from these principles is explicitly justified in writing.
+  that inline rationale comments haven't crept back in where clear naming/structure or a spec/plan
+  note would do, that public API surfaces still carry their `///`/JSDoc doc comments, and that any
+  deviation from these principles is explicitly justified in writing.
 - Assumptions that were validated during implementation (e.g., "confirmed via local Umbraco v17
   instance that X behaves as Y") SHOULD be captured in the plan or PR description so future
   contributors do not have to re-verify the same behavior from scratch.
@@ -112,4 +120,4 @@ recorded in the plan's Complexity Tracking section with a justification rather t
 Complexity or deviation from these principles must be justified by a concrete constraint (e.g., a
 genuine Umbraco platform limitation), not convenience.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-17
+**Version**: 1.1.0 | **Ratified**: 2026-08-17 | **Last Amended**: 2026-08-18

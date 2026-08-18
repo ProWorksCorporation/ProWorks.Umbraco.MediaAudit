@@ -27,10 +27,6 @@ public abstract class MediaAuditIntegrationTestBase : UmbracoIntegrationTest
         configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["Tests:Database:DatabaseType"] = "Sqlite",
-            // Diagnostic: the default (PrepareThreadCount: 4, SchemaDatabaseCount: 4) pool warm-up
-            // hangs indefinitely on this machine before any test code runs - 0% disk I/O, ~0% CPU,
-            // so it's blocked, not just slow. Forcing single-threaded/single-database prep to rule out
-            // a Windows-specific threading/locking issue in the pool warm-up itself.
             ["Tests:Database:PrepareThreadCount"] = "1",
             ["Tests:Database:SchemaDatabaseCount"] = "1",
             ["Tests:Database:EmptyDatabasesCount"] = "0",

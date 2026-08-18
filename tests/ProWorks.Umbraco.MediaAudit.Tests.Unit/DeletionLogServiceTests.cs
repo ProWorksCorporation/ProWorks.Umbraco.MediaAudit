@@ -19,11 +19,6 @@ public class DeletionLogServiceTests
         var scopeProvider = new Mock<IScopeProvider>();
         scopeProvider
             .Setup(p => p.CreateScope(
-                // global:: is required here (not just before the rename) - this file's namespace
-                // now nests under ProWorks.Umbraco.*, and C# searches enclosing namespaces for a
-                // matching child before falling back to the true global "Umbraco" root, so a bare
-                // "Umbraco.Cms...." reference written inside the namespace body resolves to
-                // "ProWorks.Umbraco.Cms" (which doesn't exist) instead of the real Umbraco SDK.
                 It.IsAny<IsolationLevel>(), It.IsAny<global::Umbraco.Cms.Core.Scoping.RepositoryCacheMode>(), It.IsAny<IEventDispatcher>(),
                 It.IsAny<IScopedNotificationPublisher>(), It.IsAny<bool?>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(scope.Object);
@@ -85,8 +80,6 @@ public class DeletionLogServiceTests
             PerformedByUserId = 7,
             ItemCount = 1,
             TotalSizeBytes = 1234,
-            // Matches what LogAction's plain System.Text.Json.Serialize(items) actually produces -
-            // PascalCase, no custom naming policy - not the "key"/"name" a hand-guess might use.
             Items = $"[{{\"Key\":\"{itemKey}\",\"Name\":\"hero.jpg\"}}]",
             SkippedCount = 0,
         };

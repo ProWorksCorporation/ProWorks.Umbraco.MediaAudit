@@ -43,9 +43,6 @@ public class MediaDeleteServiceTests
     [Fact]
     public async Task DeleteAsync_skips_an_item_that_has_become_referenced_since_the_last_audit()
     {
-        // spec.md edge case: protect against deleting items that turn out to be in use. This is
-        // also where the ancestor-folder fix (research.md §4) is enforced, since DeleteAsync calls
-        // the same GetUsagesAsync the usage-detail view and classification both rely on.
         var (service, mediaService, auditService, _) = CreateService();
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("now-used.jpg", mediaType, id: 2);

@@ -42,7 +42,7 @@ describe("media-audit-deletion-log", () => {
     expect(rows).to.have.length(2);
     expect(rows[0].textContent).to.contain("Delete");
     expect(rows[0].textContent).to.contain("2.0 KB");
-    expect(rows[0].textContent).to.contain("1"); // skippedCount
+    expect(rows[0].textContent).to.contain("1");
     expect(rows[1].textContent).to.contain("Purge");
   });
 
@@ -55,7 +55,7 @@ describe("media-audit-deletion-log", () => {
         entries: [
           makeDeletionLogEntry({ id: 1, actionType: "Delete", itemCount: 2 }),
           makeDeletionLogEntry({ id: 2, actionType: "Purge", itemCount: 1 }),
-          makeDeletionLogEntry({ id: 3, actionType: "Delete", itemCount: 0 }), // fully-skipped batch
+          makeDeletionLogEntry({ id: 3, actionType: "Delete", itemCount: 0 }),
         ],
       })
     );
@@ -115,7 +115,7 @@ describe("media-audit-deletion-log", () => {
     await aTimeout(20);
 
     expect(purgeRequestBody).to.deep.equal({ mediaKeys: entry.items.map((i) => i.key) });
-    expect(getCallCount).to.equal(2); // initial load + reload after purge
+    expect(getCallCount).to.equal(2);
     expect(el.shadowRoot!.querySelector("media-audit-purge-confirm")).to.not.exist;
   });
 });

@@ -64,9 +64,6 @@ export class MediaAuditDetailElement extends UmbElementMixin(LitElement) {
     if (!this._usages) return nothing;
 
     if (this._usages.length === 0) {
-      // Data-integrity condition (data-model.md validation rules, contracts §GET /items/{key}/usages):
-      // a "Used" item that resolves zero usages usually means a stale relation pointing at content
-      // that no longer exists - surface that distinctly rather than an unexplained empty list.
       return html`
         <uui-tag color="warning">
           Marked "Used" but no active references could be found. This can happen when the

@@ -35,7 +35,6 @@ public class MediaPurgeServiceTests
 
         Assert.Equal(new[] { media.Key }, result.Purged);
         Assert.Empty(result.Skipped);
-        // Scoped per-item Delete(), never the untargeted EmptyRecycleBin() (research.md §5).
         mediaService.Verify(m => m.Delete(media, It.IsAny<int>()), Times.Once);
         mediaService.Verify(m => m.EmptyRecycleBin(It.IsAny<int>()), Times.Never);
     }
@@ -43,12 +42,9 @@ public class MediaPurgeServiceTests
     [Fact]
     public void Purge_skips_an_item_already_restored_out_of_the_recycle_bin()
     {
-        // spec.md edge case: an item restored by someone else since being soft-deleted must be
-        // skipped, not purged or errored as a whole batch.
         var (service, mediaService, _) = CreateService();
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("restored.jpg", mediaType, id: 2);
-        // Trashed defaults to false - i.e. already restored.
 
         mediaService.Setup(m => m.GetById(media.Key)).Returns(media);
 

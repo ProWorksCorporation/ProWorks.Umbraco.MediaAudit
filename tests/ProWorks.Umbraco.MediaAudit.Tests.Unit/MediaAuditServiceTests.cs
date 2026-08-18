@@ -105,8 +105,6 @@ public class MediaAuditServiceTests
     [Fact]
     public async Task Folder_type_media_is_excluded_from_results()
     {
-        // spec.md edge case: a folder is an organizational container, not an audited item -
-        // resolved by excluding it entirely rather than always showing it as "Unused" clutter.
         var (service, mediaService, relationService, _, _) = CreateService();
         var folderType = ModelFactory.CreateFolderMediaType();
         var folder = ModelFactory.CreateMedia("Campaign Assets", folderType, id: 3);
@@ -122,8 +120,6 @@ public class MediaAuditServiceTests
     [Fact]
     public async Task Trashed_media_is_excluded_from_results()
     {
-        // GetPagedDescendants(Root, ...) turns out to include already-trashed items (found during
-        // manual US4 testing) - must be excluded explicitly, same as folders.
         var (service, mediaService, relationService, _, _) = CreateService();
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("deleted.jpg", mediaType, id: 4);
@@ -140,8 +136,6 @@ public class MediaAuditServiceTests
     [Fact]
     public async Task Media_is_Used_when_only_an_ancestor_folder_is_referenced()
     {
-        // research.md §4 addendum: a gallery/slideshow block can pick the *folder* itself - Umbraco
-        // then records the relation on the folder node, never the child file.
         var (service, mediaService, relationService, _, _) = CreateService();
         var folderType = ModelFactory.CreateFolderMediaType();
         var folder = ModelFactory.CreateMedia("Gallery", folderType, id: 10);
@@ -295,15 +289,13 @@ public class MediaAuditServiceTests
     [Fact]
     public async Task GetUsagesAsync_returns_empty_for_a_stale_relation_pointing_at_deleted_content()
     {
-        // data-model.md validation rule: a "Used" item that resolves zero usages is the
-        // stale-relation data-integrity condition, not an error - the client surfaces it distinctly.
         var (service, mediaService, relationService, contentService, scanner) = CreateService();
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("hero.jpg", mediaType, id: 42);
 
         mediaService.Setup(m => m.GetById(media.Key)).Returns(media);
         relationService.Setup(r => r.GetByChildId(42)).Returns(new[] { RelatedMediaRelation(402, 42) });
-        contentService.Setup(c => c.GetById(402)).Returns((IContent?)null); // content since deleted
+        contentService.Setup(c => c.GetById(402)).Returns((IContent?)null);
         scanner.Setup(s => s.FindReferencesAsync(media, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<MediaUsageReference>());
 

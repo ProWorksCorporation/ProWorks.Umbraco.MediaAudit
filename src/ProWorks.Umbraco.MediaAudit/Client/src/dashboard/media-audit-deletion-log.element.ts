@@ -9,7 +9,6 @@ import {
 import { UmbElementMixin } from "@umbraco-cms/backoffice/element-api";
 import { UMB_NOTIFICATION_CONTEXT } from "@umbraco-cms/backoffice/notification";
 import { MediaAuditRepository, type DeletionLogEntry } from "../api/media-audit.repository.js";
-// Side-effect import - registers <media-audit-purge-confirm>, used below.
 import "./media-audit-purge-confirm.element.js";
 
 /**
@@ -79,9 +78,6 @@ export class MediaAuditDeletionLogElement extends UmbElementMixin(LitElement) {
       const result = await MediaAuditRepository.purgeItems(entry.items.map((item) => item.key));
       this._purgeConfirmEntry = undefined;
 
-      // Skip-reporting feedback (spec.md race-condition edge case): an item already restored out
-      // of the Recycle Bin by someone else is skipped, not purged or errored as a whole batch -
-      // surface that distinctly rather than a generic "done".
       if (result.skipped.length > 0) {
         this.#notificationContext?.peek("warning", {
           data: {

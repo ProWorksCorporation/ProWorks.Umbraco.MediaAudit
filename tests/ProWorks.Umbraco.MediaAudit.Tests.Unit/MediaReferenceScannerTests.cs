@@ -84,7 +84,6 @@ public class MediaReferenceScannerTests
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("photo.jpg", mediaType, id: 1);
 
-        // FR-004: a reference from unpublished/draft-only content still counts as "Used".
         var content = ModelFactory.CreateContent("Draft Page", contentType, id: 100, published: false);
         content.SetValue("bodyText", media.Key.ToString());
 
@@ -98,8 +97,6 @@ public class MediaReferenceScannerTests
     [Fact]
     public async Task FindReferencesAsync_attributes_the_correct_culture_for_a_variant_property()
     {
-        // research.md §8 (FR-017): a reference in only one language variant must still be found,
-        // and reported against that specific culture - not silently merged/ignored.
         var contentType = ModelFactory.CreateContentType(variesByCulture: true);
         var mediaType = ModelFactory.CreateMediaType();
         var media = ModelFactory.CreateMedia("photo.jpg", mediaType, id: 1);
@@ -108,7 +105,6 @@ public class MediaReferenceScannerTests
         content.SetCultureName("Homepage (FR)", "fr-FR");
         content.SetCultureName("Homepage (EN)", "en-US");
         content.SetValue("variantText", media.Key.ToString(), culture: "fr-FR");
-        // en-US variant deliberately left without the reference.
 
         var scanner = new MediaReferenceScanner(SetUpContentService(content).Object);
         var results = await scanner.FindReferencesAsync(media);

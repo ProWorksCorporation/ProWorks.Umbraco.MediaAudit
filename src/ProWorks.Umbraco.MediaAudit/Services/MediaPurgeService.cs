@@ -32,9 +32,6 @@ public sealed class MediaPurgeService : IMediaPurgeService
                 continue;
             }
 
-            // Fresh Trashed-state re-check immediately before purging (research.md §5; spec.md edge
-            // case: an item restored out of the Recycle Bin by someone else since being soft-deleted
-            // must be skipped, not purged or errored as a whole batch).
             if (!media.Trashed)
             {
                 skipped.Add(new MediaActionSkip { MediaKey = key, Reason = "NotTrashed" });
@@ -46,7 +43,6 @@ public sealed class MediaPurgeService : IMediaPurgeService
             loggedItems.Add(new DeletionLogItem { Key = media.Key, Name = media.Name ?? key.ToString() });
             totalSizeBytes += sizeBytes;
 
-            // Per-item Delete(), never EmptyRecycleBin() - scoped to exactly what was requested.
             _mediaService.Delete(media);
         }
 

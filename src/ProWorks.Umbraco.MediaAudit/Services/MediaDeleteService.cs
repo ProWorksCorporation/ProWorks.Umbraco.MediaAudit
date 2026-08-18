@@ -34,12 +34,6 @@ public sealed class MediaDeleteService : IMediaDeleteService
                 continue;
             }
 
-            // Mandatory fresh re-check immediately before deleting (research.md §4-5; spec.md edge
-            // case: "protect against deleting items that turn out to be in use"). Reuses
-            // GetUsagesAsync rather than re-implementing the relation+scan+ancestor-folder logic
-            // here, so the gallery/slideshow folder-reference fix (research.md §4 addendum) applies
-            // to this safety check automatically instead of needing a second, separately-maintained
-            // copy of it.
             var usages = await _auditService.GetUsagesAsync(key, cancellationToken);
             if (usages is null)
             {

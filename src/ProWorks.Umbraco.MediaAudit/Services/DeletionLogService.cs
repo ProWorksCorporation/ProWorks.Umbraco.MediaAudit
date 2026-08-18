@@ -37,8 +37,6 @@ public sealed class DeletionLogService : IDeletionLogService
             SkippedCount = skippedCount,
         };
 
-        // Table/PK column supplied explicitly (rather than via attributes on DeletionLogRow) so this
-        // stays a plain, attribute-free POCO matched by the SQL's own column aliases in GetPagedHistory.
         var id = scope.Database.Insert(TableName, "id", true, row);
         scope.Complete();
         return Convert.ToInt32(id);
@@ -50,8 +48,6 @@ public sealed class DeletionLogService : IDeletionLogService
 
         var totalItems = scope.Database.ExecuteScalar<int>($"SELECT COUNT(*) FROM {TableName}");
 
-        // NPoco's paged Fetch overload handles provider-specific paging syntax (SQLite vs. SQL
-        // Server) itself, rather than hand-writing OFFSET/FETCH or LIMIT/OFFSET here.
         var rows = scope.Database.Fetch<DeletionLogRow>(
             Math.Max(page, 1),
             pageSize,

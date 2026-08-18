@@ -39,7 +39,6 @@ public sealed class MediaReferenceScanner : IMediaReferenceScanner
 
             foreach (var content in page)
             {
-                // Invariant content has no AvailableCultures - represent that as "no culture" (null).
                 var cultures = content.AvailableCultures.Any()
                     ? content.AvailableCultures
                     : new[] { (string?)null };
@@ -48,8 +47,6 @@ public sealed class MediaReferenceScanner : IMediaReferenceScanner
                 {
                     foreach (var property in content.Properties)
                     {
-                        // published:false reads the currently-saved (draft) value, which is the
-                        // superset of published content - resolves FR-004 (drafts are covered too).
                         var raw = property.GetValue(culture, published: false);
                         if (raw is null)
                         {
