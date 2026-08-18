@@ -1,0 +1,7 @@
+{
+  "Category": "Editor Tools",
+  "AlternateCategory": "Developer Tools",
+  "DocumentationUrl": "https://github.com/ProWorksCorporation/Umbraco.MediaAudit/blob/main/README.md",
+  "IssueTrackerUrl": "https://github.com/ProWorksCorporation/Umbraco.MediaAudit/issues",
+  "Tags": ["media", "media library", "cleanup", "housekeeping", "audit", "backoffice dashboard"]
+}

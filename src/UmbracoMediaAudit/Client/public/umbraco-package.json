@@ -1,0 +1,14 @@
+{
+  "id": "UmbracoMediaAudit",
+  "name": "UmbracoMediaAudit",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Umbraco Media Audit Bundle",
+      "alias": "UmbracoMediaAudit.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/UmbracoMediaAudit/umbraco-media-audit.js"
+    }
+  ]
+}
