@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Umbraco's own integration-test scaffolding (UmbracoIntegrationTest, UmbracoIntegrationTestWithMediaEditing,
+         UmbracoTestServerTestBase) is NUnit-based, not xUnit - its base Setup()/TearDown() methods are
+         decorated with NUnit's [SetUp]/[TearDown], which only NUnit's runner invokes. Confirmed via
+         reflection against the actual 17.2.2 assembly rather than assumed. NUnit itself and Umbraco.Cms.Tests
+         (builders, UmbracoTestAttribute) come along transitively; NUnit3TestAdapter is added explicitly since
+         Umbraco's own nuspec deliberately excludes test-runner-only packages. Pinned to the same exact 17.2.2
+         patch as ProWorks.Umbraco.MediaAudit.Tests.Unit for consistency between the two test projects. -->
+    <PackageReference Include="Umbraco.Cms.Tests.Integration" Version="17.2.2" />
+    <PackageReference Include="Umbraco.Cms.Tests" Version="17.2.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ProWorks.Umbraco.MediaAudit\ProWorks.Umbraco.MediaAudit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Umbraco.Cms.Tests.Integration ships this as a NuGet contentFiles item (which is supposed to
+         auto-copy to the consuming project's output on build), but it doesn't actually land in
+         bin/ here - without it UmbracoDatabaseFactory has no connection string and every test fails
+         with "The factory has not been configured with a proper connection string." Copied from the
+         package's own contentFiles/any/net10.0/appsettings.Tests.json and copied to output explicitly
+         instead of relying on the contentFiles mechanism. -->
+    <None Update="appsettings.Tests.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

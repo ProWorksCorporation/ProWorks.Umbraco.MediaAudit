@@ -28,10 +28,10 @@ end-to-end against the acceptance scenarios in spec.md. Implementation steps bel
 
 ```powershell
 # From the sample Umbraco site project
-dotnet run --project src/UmbracoMediaAudit.Web
+dotnet run --project src/ProWorks.Umbraco.MediaAudit.Web
 
 # In a separate terminal, for backoffice asset development
-cd src/UmbracoMediaAudit/Client
+cd src/ProWorks.Umbraco.MediaAudit/Client
 npm install
 npm run dev   # or: npm run build, for a production-equivalent bundle
 ```

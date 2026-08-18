@@ -34,7 +34,7 @@ workflow.
 ## Installation
 
 ```powershell
-dotnet add package UmbracoMediaAudit
+dotnet add package ProWorks.Umbraco.MediaAudit
 ```
 
 Build your site as usual. The package is a self-contained Razor Class Library — installing it is
@@ -80,10 +80,10 @@ local setup and validation walkthrough.
 
 ```powershell
 # Sample site
-dotnet run --project src/UmbracoMediaAudit.Web
+dotnet run --project src/ProWorks.Umbraco.MediaAudit.Web
 
 # Backoffice client assets (separate terminal)
-cd src/UmbracoMediaAudit/Client
+cd src/ProWorks.Umbraco.MediaAudit/Client
 npm install
 npm run dev
 ```

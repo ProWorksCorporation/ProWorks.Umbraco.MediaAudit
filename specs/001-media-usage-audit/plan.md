@@ -85,7 +85,7 @@ specs/001-media-usage-audit/
 
 ### Source Code (repository root)
 
-> **Note**: `UmbracoMediaAudit` below is a Razor Class Library (RCL), not a C#-vs-JavaScript choice —
+> **Note**: `ProWorks.Umbraco.MediaAudit` below is a Razor Class Library (RCL), not a C#-vs-JavaScript choice —
 > the dashboard UI itself is still TypeScript/Lit built by Vite (see `Client/` below). The RCL is the
 > .NET project type that lets `dotnet pack` embed those built JS/CSS files (from `wwwroot`) together
 > with this feature's C# server code into one NuGet package, so a client can install the whole thing
@@ -93,8 +93,8 @@ specs/001-media-usage-audit/
 
 ```text
 src/
-├── UmbracoMediaAudit/                        # Shippable RCL — the NuGet/Marketplace package
-│   ├── UmbracoMediaAudit.csproj              # Marketplace metadata: Title/Description/Version/Authors/
+├── ProWorks.Umbraco.MediaAudit/                        # Shippable RCL — the NuGet/Marketplace package
+│   ├── ProWorks.Umbraco.MediaAudit.csproj              # Marketplace metadata: Title/Description/Version/Authors/
 │   │                                          # PackageProjectUrl/PackageLicenseExpression, umbraco-marketplace tag
 │   ├── Composers/
 │   │   └── MediaAuditComposer.cs             # Registers services, API controllers, package migration
@@ -135,21 +135,21 @@ src/
 │   │   ├── tsconfig.json
 │   │   └── vite.config.ts
 │   └── wwwroot/                              # Vite build output — embedded as static web assets on `dotnet pack`
-│       └── App_Plugins/UmbracoMediaAudit/
+│       └── App_Plugins/ProWorks.Umbraco.MediaAudit/
 │
-└── UmbracoMediaAudit.Web/                    # Sample Umbraco v17 site for local dev + quickstart.md validation
+└── ProWorks.Umbraco.MediaAudit.Web/                    # Sample Umbraco v17 site for local dev + quickstart.md validation
 
 tests/
-├── UmbracoMediaAudit.Tests.Unit/             # xUnit — classification, scanner, delete-safety logic
-├── UmbracoMediaAudit.Tests.Integration/      # xUnit — against seeded local Umbraco v17 SQLite instance
-└── UmbracoMediaAudit.Client.Tests/           # Web Test Runner — Lit element tests
+├── ProWorks.Umbraco.MediaAudit.Tests.Unit/             # xUnit — classification, scanner, delete-safety logic
+├── ProWorks.Umbraco.MediaAudit.Tests.Integration/      # xUnit — against seeded local Umbraco v17 SQLite instance
+└── ProWorks.Umbraco.MediaAudit.Client.Tests/           # Web Test Runner — Lit element tests
 ```
 
 **Structure Decision**: Single Umbraco package project (RCL) following the Vite-Package-Setup pattern
 from research.md §2 — this is a self-contained backoffice add-on, not a frontend/backend split web
 application, so the "web application" structure option doesn't apply. The RCL's `Client/` folder holds
 the Vite/Lit/TypeScript source; its build output goes straight into the same project's `wwwroot` so
-`dotnet pack` embeds it automatically for Marketplace distribution. `UmbracoMediaAudit.Web` is a
+`dotnet pack` embeds it automatically for Marketplace distribution. `ProWorks.Umbraco.MediaAudit.Web` is a
 throwaway sample site (standard Umbraco template) used only for local development and the
 quickstart.md validation scenarios — it is not part of what ships. The reference Python script lives
 under the spec's own `reference/` folder as research material/cross-validation tool (quickstart.md §8),

@@ -9,19 +9,19 @@
 // clicks Run Audit, and reads the dashboard's own /summary and /items responses as they happen.
 //
 // Prerequisites:
-//   - The sample site is already running: dotnet run --project src/UmbracoMediaAudit.Web
+//   - The sample site is already running: dotnet run --project src/ProWorks.Umbraco.MediaAudit.Web
 //     (defaults to https://localhost:44318 - override with SITE_URL if different)
 //   - Run reference/media_audit.py against the SAME site's Umbraco.sqlite.db first, with
 //     --output pointed at a CSV path, then pass that path as this script's one argument.
 //   - `playwright` + its chromium browser must be installed - this repo already has both under
-//     tests/UmbracoMediaAudit.Client.Tests/node_modules (installed for T058), resolved below via
+//     tests/ProWorks.Umbraco.MediaAudit.Client.Tests/node_modules (installed for T058), resolved below via
 //     createRequire rather than a plain `import "playwright"` (bare-specifier ESM resolution is
 //     based on THIS file's own location, not CWD, and NODE_PATH does not affect it either - this
 //     script deliberately lives alongside media_audit.py, not inside that test project).
 //     Run from anywhere:
 //       node specs/001-media-usage-audit/reference/cross-validate.mjs <path-to-python-csv>
 //
-// Admin credentials match src/UmbracoMediaAudit.Web/appsettings.Development.json's unattended
+// Admin credentials match src/ProWorks.Umbraco.MediaAudit.Web/appsettings.Development.json's unattended
 // install (local dev only, not a secret worth guarding - see media-audit-local-dev.md).
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -29,7 +29,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const clientTestsPkgJson = path.resolve(here, "../../../tests/UmbracoMediaAudit.Client.Tests/package.json");
+const clientTestsPkgJson = path.resolve(here, "../../../tests/ProWorks.Umbraco.MediaAudit.Client.Tests/package.json");
 const requireFromClientTests = createRequire(clientTestsPkgJson);
 const playwrightModule = await import(pathToFileURL(requireFromClientTests.resolve("playwright")).href);
 // playwright is published as CJS - ESM interop sometimes surfaces its exports under .default

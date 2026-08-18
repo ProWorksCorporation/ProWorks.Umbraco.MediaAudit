@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="../tests/ProWorks.Umbraco.MediaAudit.Tests.Integration/ProWorks.Umbraco.MediaAudit.Tests.Integration.csproj" />
+  <Project Path="../tests/ProWorks.Umbraco.MediaAudit.Tests.Unit/ProWorks.Umbraco.MediaAudit.Tests.Unit.csproj" />
+  <Project Path="ProWorks.Umbraco.MediaAudit.Web/ProWorks.Umbraco.MediaAudit.Web.csproj" />
+  <Project Path="ProWorks.Umbraco.MediaAudit/ProWorks.Umbraco.MediaAudit.csproj" />
+</Solution>

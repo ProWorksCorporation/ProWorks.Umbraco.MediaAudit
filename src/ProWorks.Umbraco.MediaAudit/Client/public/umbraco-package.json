@@ -1,0 +1,14 @@
+{
+  "id": "ProWorks.Umbraco.MediaAudit",
+  "name": "ProWorks.Umbraco.MediaAudit",
+  "version": "0.0.0",
+  "allowTelemetry": true,
+  "extensions": [
+    {
+      "name": "Umbraco Media Audit Bundle",
+      "alias": "ProWorks.Umbraco.MediaAudit.Bundle",
+      "type": "bundle",
+      "js": "/App_Plugins/ProWorks.Umbraco.MediaAudit/umbraco-media-audit.js"
+    }
+  ]
+}

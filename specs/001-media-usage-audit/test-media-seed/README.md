@@ -12,9 +12,9 @@ the folder from a dropped directory), or drag the files in individually.
 
 ## Schema
 
-The sample site (`src/UmbracoMediaAudit.Web`) seeds this automatically on first boot against a
-blank DB — see [`TestSchemaSeeder.cs`](../../../src/UmbracoMediaAudit.Web/TestSchema/TestSchemaSeeder.cs)
-and [`uSync/README.md`](../../../src/UmbracoMediaAudit.Web/uSync/README.md) for how. Nothing to
+The sample site (`src/ProWorks.Umbraco.MediaAudit.Web`) seeds this automatically on first boot against a
+blank DB — see [`TestSchemaSeeder.cs`](../../../src/ProWorks.Umbraco.MediaAudit.Web/TestSchema/TestSchemaSeeder.cs)
+and [`uSync/README.md`](../../../src/ProWorks.Umbraco.MediaAudit.Web/uSync/README.md) for how. Nothing to
 create by hand:
 
 - **Audit Test Page** doctype (allowed at root, varies by culture) — properties: Title, Body Text

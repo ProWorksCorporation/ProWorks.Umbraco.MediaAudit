@@ -51,7 +51,7 @@ standard metadata (`Title`, `Description`, `Version`, `Authors`, `PackageProject
 > so there is nothing to publish to NuGet and nothing for a client's site to install. An RCL's
 > `wwwroot` is specifically designed to be embedded as ASP.NET Core static web assets on `dotnet pack`,
 > so when a client installs this package via NuGet, their site automatically serves this feature's JS
-> at `/App_Plugins/UmbracoMediaAudit/...` with no manual file copying. RCL vs. plain `App_Plugins` is a
+> at `/App_Plugins/ProWorks.Umbraco.MediaAudit/...` with no manual file copying. RCL vs. plain `App_Plugins` is a
 > "distributable package vs. single-site customization" choice, not a "C#/.NET vs. JavaScript" choice —
 > it was fixed by the "marketplace deployable" requirement, not a UI-technology decision.
 
