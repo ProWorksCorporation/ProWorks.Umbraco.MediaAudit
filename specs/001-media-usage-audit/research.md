@@ -150,6 +150,15 @@ item is still-unused only if it resolves zero usages) — so the ancestor-folder
 one place it matters most (actually preventing deletion) automatically, with no separately-maintained
 copy of the check to keep in sync.
 
+**Trashed items appearing in audit results (found during User Story 4 manual testing)**:
+`IMediaService.GetPagedDescendants(Constants.System.Root, ...)` was assumed to exclude already-
+trashed (Recycle Bin) content by default — confirmed false: a real deleted item still showed up in
+`ExecuteAuditAsync`'s classification loop and `GetFolders()`'s folder enumeration, with a Recycle Bin
+folder path. Fixed by explicitly filtering `.Where(m => !m.Trashed)` in both places, alongside the
+existing folder-type exclusion. A trashed item isn't "unused" in the audit's sense — it's already
+deleted, and belongs in the deletion log / Recycle Bin, not the Used/Unused list. (Media already
+listed from a prior audit run stays stale until the next "Run Audit," same as any other change.)
+
 **Alternatives considered**:
 - *Relations only*: rejected as the sole mechanism — see gap above; unacceptable given the delete
   feature.

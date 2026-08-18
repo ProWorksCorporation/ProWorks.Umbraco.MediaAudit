@@ -86,6 +86,9 @@ public sealed class MediaAuditService : IMediaAuditService
             var page = _mediaService
                 .GetPagedDescendants(CoreConstants.System.Root, pageIndex, PageSize, out total)
                 .Where(m => m.ContentType.Alias == CoreConstants.Conventions.MediaTypes.Folder)
+                // See the matching exclusion in ExecuteAuditAsync - GetPagedDescendants(Root, ...)
+                // includes trashed items, so a trashed folder would otherwise leak into the filter.
+                .Where(m => !m.Trashed)
                 .ToList();
 
             folders.AddRange(page.Select(f => new MediaFolder
@@ -325,6 +328,11 @@ public sealed class MediaAuditService : IMediaAuditService
                     // classified. Without this, every folder shows up as permanently "Unused" clutter,
                     // since content references individual media items, never the containing folder.
                     .Where(m => m.ContentType.Alias != CoreConstants.Conventions.MediaTypes.Folder)
+                    // GetPagedDescendants(Root, ...) turns out to include already-trashed items too
+                    // (confirmed by a real trashed item showing up in the audit with a Recycle Bin
+                    // folder path) - exclude them explicitly. A trashed item isn't "unused," it's
+                    // already deleted; it belongs in the deletion log/Recycle Bin, not this list.
+                    .Where(m => !m.Trashed)
                     .ToList();
 
                 items.AddRange(page.Select(ClassifyMedia));
