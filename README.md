@@ -63,22 +63,10 @@ gallery/slideshow block that picks the folder rather than each file) is treated 
 Member data (profile photos, etc.) is intentionally out of scope for this version — only document
 content is scanned.
 
-## Local development
+## Contributing
 
-This repo's own local Umbraco sample site, spec-kit documents, and manual test fixtures live under
-`src/` and `specs/001-media-usage-audit/`. See
-[specs/001-media-usage-audit/quickstart.md](specs/001-media-usage-audit/quickstart.md) for the full
-local setup and validation walkthrough.
-
-```powershell
-# Sample site
-dotnet run --project src/ProWorks.Umbraco.MediaAudit.Web
-
-# Backoffice client assets (separate terminal)
-cd src/ProWorks.Umbraco.MediaAudit/Client
-npm install
-npm run dev
-```
+Working on the package itself (running the sample site, tests, or spec-kit docs)? See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

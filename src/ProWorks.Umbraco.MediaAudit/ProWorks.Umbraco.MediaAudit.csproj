@@ -18,6 +18,7 @@
     <PackageTags>umbraco-marketplace umbraco-package media-audit</PackageTags>
     <RepositoryUrl>https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit</RepositoryUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>audit-icon.png</PackageIcon>
   </PropertyGroup>
 
 
@@ -32,6 +33,7 @@
     <Content Remove="Client\**" />
     <None Include="Client\public\umbraco-package.json" Pack="false" />
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\images\audit-icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>
