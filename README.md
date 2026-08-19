@@ -18,11 +18,6 @@ safe, auditable tools to clean up the rest.
 - **Deletion log**: one accountability entry per delete/purge *batch* (who, when, how many items, how
   much space), not one entry per file, so it stays useful even after a large cleanup.
 
-## Requirements
-
-- Umbraco CMS 17.x
-- .NET 10
-
 ## Installation
 
 ```powershell
