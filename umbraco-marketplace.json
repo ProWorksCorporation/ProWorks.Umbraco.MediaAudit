@@ -12,6 +12,28 @@
     "Contributors": [],
     "SyncContributorsFromRepository": false
   },
+  "Screenshots": [
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/main/images/01-dashboard-initial.jpg",
+      "Caption": "The Media Audit dashboard, ready to scan the media library"
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/main/images/02-audit-results.jpg",
+      "Caption": "Audit results: Used vs. Unused media, with per-item size, folder, and last-modified detail"
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/main/images/03-used-item-drilldown.jpg",
+      "Caption": "Usage drill-down: exactly which content references a \"Used\" item, and how"
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/main/images/04-unused-delete-selected.jpg",
+      "Caption": "Selecting confirmed-unused items for a safe, re-checked delete"
+    },
+    {
+      "ImageUrl": "https://raw.githubusercontent.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/main/images/05-deletion-log.jpg",
+      "Caption": "Deletion log: an accountability record for every delete/purge batch"
+    }
+  ],
   "LicenseTypes": ["Free"],
   "LookingForContributors": false,
   "LookingForMaintainer": false,
