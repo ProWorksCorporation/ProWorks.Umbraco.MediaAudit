@@ -5,7 +5,7 @@
   "allowTelemetry": true,
   "extensions": [
     {
-      "name": "Umbraco Media Audit Bundle",
+      "name": "ProWorks Umbraco Media Audit Bundle",
       "alias": "ProWorks.Umbraco.MediaAudit.Bundle",
       "type": "bundle",
       "js": "/App_Plugins/ProWorks.Umbraco.MediaAudit/umbraco-media-audit.js"

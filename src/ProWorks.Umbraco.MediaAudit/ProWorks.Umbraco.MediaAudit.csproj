@@ -9,8 +9,8 @@
   <PropertyGroup>
     <PackageId>ProWorks.Umbraco.MediaAudit</PackageId>
     <Product>ProWorks.Umbraco.MediaAudit</Product>
-    <Title>Umbraco Media Audit</Title>
-    <Version>0.1.0</Version>
+    <Title>ProWorks Umbraco Media Audit</Title>
+    <Version>1.0.1</Version>
     <Authors>ProWorks.Umbraco.MediaAudit contributors</Authors>
     <Description>Audit your Umbraco CMS (v17+) media library right from the backoffice: classify every item as Used or Unused, drill into exactly what references it, and safely delete or purge the rest with a full accountability log.</Description>
     <PackageProjectUrl>https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit</PackageProjectUrl>

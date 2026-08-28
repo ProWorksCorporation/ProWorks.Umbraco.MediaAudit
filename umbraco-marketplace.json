@@ -1,6 +1,6 @@
 {
   "$schema": "https://marketplace.umbraco.com/umbraco-marketplace-schema.json",
-  "Title": "Umbraco Media Audit",
+  "Title": "ProWorks Umbraco Media Audit",
   "Category": "Editor Tools",
   "AlternateCategory": "Developer Tools",
   "PackageType": "Package",

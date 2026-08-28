@@ -33,7 +33,7 @@ namespace ProWorks.Umbraco.MediaAudit.Composers
             {
                 opt.SwaggerDoc(Constants.ApiName, new OpenApiInfo
                 {
-                    Title = "Umbraco Media Audit Backoffice API",
+                    Title = "ProWorks Umbraco Media Audit Backoffice API",
                     Version = "1.0",
                 });
 

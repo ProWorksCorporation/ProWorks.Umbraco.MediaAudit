@@ -32,6 +32,10 @@ src/ProWorks.Umbraco.MediaAudit.Web/wwwroot/umbraco/
 # clone, so it's excluded the same way.
 src/ProWorks.Umbraco.MediaAudit.Web/uSync/v*/Media/
 
+# === Build output ===
+# Packed .nupkg releases (dotnet pack -o artifacts/nuget) - generated, never source-controlled.
+artifacts/
+
 # === OS / editor cruft ===
 .DS_Store
 Thumbs.db
