@@ -1,6 +1,6 @@
 # ProWorks Umbraco Media Audit
 
-This package audits your Umbraco CMS (v17+) media library right from the backoffice — classifying
+This package audits your Umbraco CMS (v18+) media library right from the backoffice — classifying
 every item as Used or Unused, showing exactly which pages reference it, and giving administrators
 safe, auditable tools to clean up the rest.
 

@@ -12,7 +12,7 @@
     <Title>ProWorks Umbraco Media Audit</Title>
     <Version>1.0.1</Version>
     <Authors>ProWorks.Umbraco.MediaAudit contributors</Authors>
-    <Description>Audit your Umbraco CMS (v17+) media library right from the backoffice: classify every item as Used or Unused, drill into exactly what references it, and safely delete or purge the rest with a full accountability log.</Description>
+    <Description>Audit your Umbraco CMS (v18+) media library right from the backoffice: classify every item as Used or Unused, drill into exactly what references it, and safely delete or purge the rest with a full accountability log.</Description>
     <PackageProjectUrl>https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>umbraco-marketplace umbraco-package media-audit</PackageTags>
@@ -23,10 +23,10 @@
 
 
   <ItemGroup>
-    <PackageReference Include="Umbraco.Cms.Web.Website" Version="[17.0.0,18.0.0)" />
-    <PackageReference Include="Umbraco.Cms.Web.Common" Version="[17.0.0,18.0.0)" />
-    <PackageReference Include="Umbraco.Cms.Api.Common" Version="[17.0.0,18.0.0)" />
-    <PackageReference Include="Umbraco.Cms.Api.Management" Version="[17.0.0,18.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Web.Website" Version="[18.0.0,19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Web.Common" Version="[18.0.0,19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Api.Common" Version="[18.0.0,19.0.0)" />
+    <PackageReference Include="Umbraco.Cms.Api.Management" Version="[18.0.0,19.0.0)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -56,7 +56,7 @@ public class MediaDeleteAndPurgeIntegrationTests : MediaAuditIntegrationTestBase
     public async Task DeleteAsync_skips_an_item_that_is_actually_referenced_by_a_published_page()
     {
         var image = MediaService.CreateMediaWithIdentity("actually-used.jpg", -1, CoreConstants.Conventions.MediaTypes.Image);
-        var pageType = MediaPickerTestSchema.GetOrCreatePageType(
+        var pageType = await MediaPickerTestSchema.GetOrCreatePageType(
             ContentTypeService, DataTypeService, PropertyEditors, ConfigJsonSerializer, ShortStringHelper);
         MediaPickerTestSchema.CreatePublishedPageReferencing(ContentService, pageType, "Landing Page", image.Key);
 

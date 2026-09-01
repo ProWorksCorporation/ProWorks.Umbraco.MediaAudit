@@ -33,7 +33,7 @@ internal static class MediaPickerTestSchema
     public static string MediaPickerValue(Guid mediaKey, string mediaTypeAlias = "Image") =>
         $$"""[{"key":"{{Guid.NewGuid()}}","mediaKey":"{{mediaKey}}","mediaTypeAlias":"{{mediaTypeAlias}}"}]""";
 
-    public static IContentType GetOrCreatePageType(
+    public static async Task<IContentType> GetOrCreatePageType(
         IContentTypeService contentTypeService,
         IDataTypeService dataTypeService,
         PropertyEditorCollection propertyEditors,
@@ -52,7 +52,11 @@ internal static class MediaPickerTestSchema
         }
 
         var dataType = new DataType(editor, configJsonSerializer, -1) { Name = "Media Audit Integration Test - Media Picker" };
-        dataTypeService.Save(dataType);
+        var dataTypeResult = await dataTypeService.CreateAsync(dataType, CoreConstants.Security.SuperUserKey);
+        if (!dataTypeResult.Success)
+        {
+            throw new InvalidOperationException($"Failed to create test data type: {dataTypeResult.Status}.");
+        }
 
         var propertyType = new PropertyType(shortStringHelper, dataType)
         {
@@ -77,7 +81,12 @@ internal static class MediaPickerTestSchema
             PropertyGroups = new PropertyGroupCollection(new[] { propertyGroup }),
         };
 
-        contentTypeService.Save(contentType);
+        var contentTypeResult = await contentTypeService.CreateAsync(contentType, CoreConstants.Security.SuperUserKey);
+        if (!contentTypeResult.Success)
+        {
+            throw new InvalidOperationException($"Failed to create test content type: {contentTypeResult.Result}.");
+        }
+
         return contentType;
     }
 

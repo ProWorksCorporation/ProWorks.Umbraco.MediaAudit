@@ -40,7 +40,7 @@ public sealed class MediaReferenceScanner : IMediaReferenceScanner
             foreach (var content in page)
             {
                 var cultures = content.AvailableCultures.Any()
-                    ? content.AvailableCultures
+                    ? content.AvailableCultures.Cast<string?>()
                     : new[] { (string?)null };
 
                 foreach (var culture in cultures)

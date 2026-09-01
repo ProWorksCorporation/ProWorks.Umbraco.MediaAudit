@@ -1,14 +1,11 @@
-using Asp.Versioning;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
-using Swashbuckle.AspNetCore.SwaggerGen;
+using Umbraco.Cms.Api.Common.OpenApi;
+using Umbraco.Cms.Api.Management.OpenApi;
 using Umbraco.Cms.Core.Composing;
 using Umbraco.Cms.Core.DependencyInjection;
-using Umbraco.Cms.Api.Management.OpenApi;
-using Umbraco.Cms.Api.Common.OpenApi;
 using Umbraco.Extensions;
 using ProWorks.Umbraco.MediaAudit.Migrations;
 using ProWorks.Umbraco.MediaAudit.Services;
@@ -27,37 +24,29 @@ namespace ProWorks.Umbraco.MediaAudit.Composers
             builder.Services.AddSingleton<IMediaPurgeService, MediaPurgeService>();
             builder.PackageMigrationPlans().Add<AddDeletionLogTablePlan>();
 
-            builder.Services.AddSingleton<IOperationIdHandler, CustomOperationHandler>();
+            builder.AddBackOfficeOpenApiDocument(Constants.ApiName, document => document
+                .WithTitle("ProWorks Umbraco Media Audit Backoffice API")
+                .WithBackOfficeAuthentication()
+                .ConfigureOpenApiOptions(opt => opt.AddOperationTransformer(new ShortOperationIdTransformer())));
+        }
 
-            builder.Services.Configure<SwaggerGenOptions>(opt =>
+        /// <summary>
+        /// Replaces the framework's path-derived operation ID (e.g. "GetItemsByKeyUsages") with the bare
+        /// controller action name (e.g. "GetUsages") - this document contains only our own controllers, so
+        /// there's nothing to disambiguate against. Keeps the generated TypeScript client's method names
+        /// stable/short across changes to a route's shape.
+        /// </summary>
+        private sealed class ShortOperationIdTransformer : IOpenApiOperationTransformer
+        {
+            public Task TransformAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
             {
-                opt.SwaggerDoc(Constants.ApiName, new OpenApiInfo
+                if (context.Description.ActionDescriptor is ControllerActionDescriptor controllerActionDescriptor)
                 {
-                    Title = "ProWorks Umbraco Media Audit Backoffice API",
-                    Version = "1.0",
-                });
+                    operation.OperationId = controllerActionDescriptor.ActionName;
+                }
 
-                opt.OperationFilter<UmbracoMediaAuditOperationSecurityFilter>();
-            });
-        }
-
-        public class UmbracoMediaAuditOperationSecurityFilter : BackOfficeSecurityRequirementsOperationFilterBase
-        {
-            protected override string ApiName => Constants.ApiName;
-        }
-
-        public class CustomOperationHandler : OperationIdHandler
-        {
-            public CustomOperationHandler(IOptions<ApiVersioningOptions> apiVersioningOptions) : base(apiVersioningOptions)
-            {
+                return Task.CompletedTask;
             }
-
-            protected override bool CanHandle(ApiDescription apiDescription, ControllerActionDescriptor controllerActionDescriptor)
-            {
-                return controllerActionDescriptor.ControllerTypeInfo.Namespace?.StartsWith("ProWorks.Umbraco.MediaAudit.Controllers", comparisonType: StringComparison.InvariantCultureIgnoreCase) is true;
-            }
-
-            public override string Handle(ApiDescription apiDescription) => $"{apiDescription.ActionDescriptor.RouteValues["action"]}";
         }
     }
 }

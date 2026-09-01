@@ -32,7 +32,7 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
     private IConfigurationEditorJsonSerializer ConfigJsonSerializer => GetRequiredService<IConfigurationEditorJsonSerializer>();
     private IMediaAuditService AuditService => GetRequiredService<IMediaAuditService>();
 
-    private IContentType GetOrCreatePageType() => MediaPickerTestSchema.GetOrCreatePageType(
+    private Task<IContentType> GetOrCreatePageType() => MediaPickerTestSchema.GetOrCreatePageType(
         ContentTypeService, DataTypeService, PropertyEditors, ConfigJsonSerializer, ShortStringHelper);
 
     /// <summary>RunAuditAsync fires the actual classification loop on a background thread (FR-012) -
@@ -85,7 +85,7 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
         var referencedImage = MediaService.CreateMediaWithIdentity("referenced.jpg", -1, CoreConstants.Conventions.MediaTypes.Image);
         var unreferencedImage = MediaService.CreateMediaWithIdentity("unreferenced.jpg", -1, CoreConstants.Conventions.MediaTypes.Image);
 
-        var pageType = GetOrCreatePageType();
+        var pageType = await GetOrCreatePageType();
         MediaPickerTestSchema.CreatePublishedPageReferencing(ContentService, pageType, "Home", referencedImage.Key);
 
         var run = await RunAuditAndWaitAsync();
@@ -106,7 +106,7 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
         var galleryFolder = MediaService.CreateMediaWithIdentity("Gallery", -1, CoreConstants.Conventions.MediaTypes.Folder);
         var imageInGallery = MediaService.CreateMediaWithIdentity("gallery-photo.jpg", galleryFolder.Id, CoreConstants.Conventions.MediaTypes.Image);
 
-        var pageType = GetOrCreatePageType();
+        var pageType = await GetOrCreatePageType();
         MediaPickerTestSchema.CreatePublishedPageReferencing(ContentService, pageType, "Slideshow Page", galleryFolder.Key, "Folder");
 
         await RunAuditAndWaitAsync();
@@ -135,7 +135,7 @@ public class MediaAuditServiceIntegrationTests : MediaAuditIntegrationTestBase
     public async Task GetUsagesAsync_reports_the_referencing_page_by_name()
     {
         var image = MediaService.CreateMediaWithIdentity("used-elsewhere.jpg", -1, CoreConstants.Conventions.MediaTypes.Image);
-        var pageType = GetOrCreatePageType();
+        var pageType = await GetOrCreatePageType();
         MediaPickerTestSchema.CreatePublishedPageReferencing(ContentService, pageType, "About Us", image.Key);
 
         await RunAuditAndWaitAsync();

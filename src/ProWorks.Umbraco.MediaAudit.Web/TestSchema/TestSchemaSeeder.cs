@@ -18,12 +18,12 @@ namespace ProWorks.Umbraco.MediaAudit.Web.TestSchema;
 /// run on every startup: every step checks for an existing entity by name/alias first, so it never
 /// duplicates or overwrites anything a developer created by hand afterward.
 /// </summary>
-public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNotification>
+public class TestSchemaSeeder : INotificationAsyncHandler<UmbracoApplicationStartedNotification>
 {
     private readonly IDataTypeService _dataTypeService;
     private readonly IContentTypeService _contentTypeService;
     private readonly IMemberTypeService _memberTypeService;
-    private readonly ILocalizationService _localizationService;
+    private readonly ILanguageService _languageService;
     private readonly PropertyEditorCollection _propertyEditors;
     private readonly IConfigurationEditorJsonSerializer _configJsonSerializer;
     private readonly IShortStringHelper _shortStringHelper;
@@ -33,7 +33,7 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
         IDataTypeService dataTypeService,
         IContentTypeService contentTypeService,
         IMemberTypeService memberTypeService,
-        ILocalizationService localizationService,
+        ILanguageService languageService,
         PropertyEditorCollection propertyEditors,
         IConfigurationEditorJsonSerializer configJsonSerializer,
         IShortStringHelper shortStringHelper,
@@ -42,18 +42,18 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
         _dataTypeService = dataTypeService;
         _contentTypeService = contentTypeService;
         _memberTypeService = memberTypeService;
-        _localizationService = localizationService;
+        _languageService = languageService;
         _propertyEditors = propertyEditors;
         _configJsonSerializer = configJsonSerializer;
         _shortStringHelper = shortStringHelper;
         _logger = logger;
     }
 
-    public void Handle(UmbracoApplicationStartedNotification notification)
+    public async Task HandleAsync(UmbracoApplicationStartedNotification notification, CancellationToken cancellationToken)
     {
         try
         {
-            Seed();
+            await SeedAsync();
         }
         catch (Exception ex)
         {
@@ -61,25 +61,33 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
         }
     }
 
-    private void Seed()
+    public async Task HandleAsync(IEnumerable<UmbracoApplicationStartedNotification> notifications, CancellationToken cancellationToken)
     {
-        var mediaPickerType = GetOrCreateDataType(
+        foreach (var notification in notifications)
+        {
+            await HandleAsync(notification, cancellationToken);
+        }
+    }
+
+    private async Task SeedAsync()
+    {
+        var mediaPickerType = await GetOrCreateDataTypeAsync(
             "Media Audit Test - Media Picker",
             UmbracoConstants.PropertyEditors.Aliases.MediaPicker3,
             "Umb.PropertyEditorUi.MediaPicker");
 
-        var richTextType = GetOrCreateDataType(
+        var richTextType = await GetOrCreateDataTypeAsync(
             "Media Audit Test - Rich Text",
             UmbracoConstants.PropertyEditors.Aliases.RichText,
             "Umb.PropertyEditorUi.Tiptap");
 
-        var textType = _dataTypeService.GetByEditorAlias(UmbracoConstants.PropertyEditors.Aliases.TextBox).FirstOrDefault()
-            ?? GetOrCreateDataType(
+        var textType = (await _dataTypeService.GetByEditorAliasAsync(UmbracoConstants.PropertyEditors.Aliases.TextBox)).FirstOrDefault()
+            ?? await GetOrCreateDataTypeAsync(
                 "Media Audit Test - Textstring",
                 UmbracoConstants.PropertyEditors.Aliases.TextBox,
                 "Umb.PropertyEditorUi.TextBox");
 
-        var testimonialBlock = GetOrCreateContentType(
+        var testimonialBlock = await GetOrCreateContentTypeAsync(
             alias: "auditTestTestimonialBlock",
             name: "Audit Test - Testimonial Block",
             isElement: true,
@@ -88,7 +96,7 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
                 ("avatar", "Avatar", mediaPickerType, ContentVariation.Nothing),
             });
 
-        var blockListType = GetOrCreateDataType(
+        var blockListType = await GetOrCreateDataTypeAsync(
             "Media Audit Test - Block List (Testimonial)",
             UmbracoConstants.PropertyEditors.Aliases.BlockList,
             "Umb.PropertyEditorUi.BlockList",
@@ -108,7 +116,7 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
                 return configEditor.FromConfigurationObject(config, _configJsonSerializer);
             });
 
-        var testPage = GetOrCreateContentType(
+        var testPage = await GetOrCreateContentTypeAsync(
             alias: "auditTestPage",
             name: "Audit Test Page",
             isElement: false,
@@ -122,8 +130,8 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
                 ("contentBlocks", "Content Blocks", blockListType, ContentVariation.Nothing),
             });
 
-        SeedMemberTypeProperty(mediaPickerType);
-        SeedSecondLanguage();
+        await SeedMemberTypePropertyAsync(mediaPickerType);
+        await SeedSecondLanguageAsync();
 
         _logger.LogInformation(
             "[TestSchemaSeeder] Media-audit test schema ready: doctype '{Alias}' (Title/Body Text/Featured Media [varies by culture]/Content Blocks), block '{BlockAlias}' (Avatar).",
@@ -131,13 +139,13 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
             testimonialBlock.Alias);
     }
 
-    private IDataType GetOrCreateDataType(
+    private async Task<IDataType> GetOrCreateDataTypeAsync(
         string name,
         string editorAlias,
         string editorUiAlias,
         Func<IDataEditor, IDictionary<string, object>>? configure = null)
     {
-        var existing = _dataTypeService.GetDataType(name);
+        var existing = await _dataTypeService.GetAsync(name);
         if (existing is not null)
         {
             return existing;
@@ -154,12 +162,17 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
             dataType.ConfigurationData = configure(editor);
         }
 
-        _dataTypeService.Save(dataType);
+        var result = await _dataTypeService.CreateAsync(dataType, UmbracoConstants.Security.SuperUserKey);
+        if (!result.Success)
+        {
+            throw new InvalidOperationException($"Failed to create data type '{name}': {result.Status}.");
+        }
+
         _logger.LogInformation("[TestSchemaSeeder] Created data type '{Name}'.", name);
-        return dataType;
+        return result.Result!;
     }
 
-    private IContentType GetOrCreateContentType(
+    private async Task<IContentType> GetOrCreateContentTypeAsync(
         string alias,
         string name,
         bool isElement,
@@ -197,12 +210,17 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
             PropertyGroups = new PropertyGroupCollection(new[] { propertyGroup }),
         };
 
-        _contentTypeService.Save(contentType);
+        var result = await _contentTypeService.CreateAsync(contentType, UmbracoConstants.Security.SuperUserKey);
+        if (!result.Success)
+        {
+            throw new InvalidOperationException($"Failed to create content type '{alias}': {result.Result}.");
+        }
+
         _logger.LogInformation("[TestSchemaSeeder] Created content type '{Alias}'.", alias);
         return contentType;
     }
 
-    private void SeedMemberTypeProperty(IDataType mediaPickerType)
+    private async Task SeedMemberTypePropertyAsync(IDataType mediaPickerType)
     {
         var memberTypeAlias = _memberTypeService.GetDefault();
         var memberType = _memberTypeService.Get(memberTypeAlias);
@@ -226,29 +244,34 @@ public class TestSchemaSeeder : INotificationHandler<UmbracoApplicationStartedNo
             memberType.PropertyGroups.Add(group);
         }
 
-        group.PropertyTypes.Add(new PropertyType(_shortStringHelper, mediaPickerType)
+        group!.PropertyTypes!.Add(new PropertyType(_shortStringHelper, mediaPickerType)
         {
             Alias = "profilePhoto",
             Name = "Profile Photo",
             Variations = ContentVariation.Nothing,
         });
 
-        _memberTypeService.Save(memberType);
+        var result = await _memberTypeService.UpdateAsync(memberType, UmbracoConstants.Security.SuperUserKey);
+        if (!result.Success)
+        {
+            throw new InvalidOperationException($"Failed to update member type '{memberTypeAlias}': {result.Result}.");
+        }
+
         _logger.LogInformation(
             "[TestSchemaSeeder] Added 'profilePhoto' property to member type '{Alias}'.",
             memberTypeAlias);
     }
 
-    private void SeedSecondLanguage()
+    private async Task SeedSecondLanguageAsync()
     {
         const string isoCode = "fr-FR";
-        if (_localizationService.GetLanguageByIsoCode(isoCode) is not null)
+        if (await _languageService.GetAsync(isoCode) is not null)
         {
             return;
         }
 
         var language = new Language(isoCode, "French (France)") { IsDefault = false };
-        _localizationService.Save(language);
+        await _languageService.CreateAsync(language, UmbracoConstants.Security.SuperUserKey);
         _logger.LogInformation("[TestSchemaSeeder] Created language '{IsoCode}'.", isoCode);
     }
 }

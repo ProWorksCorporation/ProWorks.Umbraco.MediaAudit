@@ -7,12 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Umbraco.Cms" Version="17.2.2" />
-    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" Version="17.2.2" />
+    <PackageReference Include="Umbraco.Cms" Version="18.1.1" />
+    <PackageReference Include="Umbraco.Cms.DevelopmentMode.Backoffice" Version="18.1.1" />
     <!-- Exports the doctypes/datatypes TestSchemaSeeder.cs creates to uSync/v9/... files, so the
          sample site's test schema is reproducible from a clone without re-running the seeder's
          in-process creation - see uSync/README.md. -->
-    <PackageReference Include="uSync" Version="17.3.7" />
+    <PackageReference Include="uSync" Version="18.1.1" />
   </ItemGroup>
 
   <ItemGroup>

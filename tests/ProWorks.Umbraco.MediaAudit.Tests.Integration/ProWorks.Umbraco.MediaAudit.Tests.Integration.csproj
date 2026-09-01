@@ -11,15 +11,15 @@
     <!-- Umbraco's own integration-test scaffolding (UmbracoIntegrationTest, UmbracoIntegrationTestWithMediaEditing,
          UmbracoTestServerTestBase) is NUnit-based, not xUnit - its base Setup()/TearDown() methods are
          decorated with NUnit's [SetUp]/[TearDown], which only NUnit's runner invokes. Confirmed via
-         reflection against the actual 17.2.2 assembly rather than assumed. NUnit itself and Umbraco.Cms.Tests
+         reflection against the actual 18.1.1 assembly rather than assumed. NUnit itself and Umbraco.Cms.Tests
          (builders, UmbracoTestAttribute) come along transitively; NUnit3TestAdapter is added explicitly since
-         Umbraco's own nuspec deliberately excludes test-runner-only packages. Pinned to the same exact 17.2.2
+         Umbraco's own nuspec deliberately excludes test-runner-only packages. Pinned to the same exact 18.1.1
          patch as ProWorks.Umbraco.MediaAudit.Tests.Unit for consistency between the two test projects. -->
-    <PackageReference Include="Umbraco.Cms.Tests.Integration" Version="17.2.2" />
-    <PackageReference Include="Umbraco.Cms.Tests" Version="17.2.2" />
+    <PackageReference Include="Umbraco.Cms.Tests.Integration" Version="18.1.1" />
+    <PackageReference Include="Umbraco.Cms.Tests" Version="18.1.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
   </ItemGroup>
 
   <ItemGroup>
