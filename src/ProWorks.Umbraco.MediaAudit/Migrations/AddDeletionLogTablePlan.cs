@@ -40,7 +40,7 @@ internal sealed class AddDeletionLogTableMigration : AsyncMigrationBase
         }
 
         Create.Table(AddDeletionLogTablePlan.TableName)
-            .WithColumn("id").AsInt32().NotNullable().Identity().PrimaryKey()
+            .WithColumn("id").AsInt32().NotNullable().Identity().PrimaryKey($"PK_{AddDeletionLogTablePlan.TableName}")
             .WithColumn("occurredAt").AsDateTime().NotNullable()
             .WithColumn("actionType").AsString(20).NotNullable()
             .WithColumn("performedByUserId").AsInt32().NotNullable()
