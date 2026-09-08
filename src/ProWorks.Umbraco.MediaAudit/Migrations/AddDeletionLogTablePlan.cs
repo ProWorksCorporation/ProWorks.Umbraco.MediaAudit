@@ -1,3 +1,4 @@
+using NPoco;
 using Umbraco.Cms.Core.Packaging;
 using Umbraco.Cms.Infrastructure.Migrations;
 
@@ -40,16 +41,32 @@ internal sealed class AddDeletionLogTableMigration : AsyncMigrationBase
             return Task.CompletedTask;
         }
 
-        Create.Table(AddDeletionLogTablePlan.TableName)
-            .WithColumn("id").AsInt32().NotNullable().Identity().PrimaryKey($"PK_{AddDeletionLogTablePlan.TableName}")
-            .WithColumn("occurredAt").AsDateTime().NotNullable()
-            .WithColumn("actionType").AsString(20).NotNullable()
-            .WithColumn("performedByUserId").AsInt32().NotNullable()
-            .WithColumn("itemCount").AsInt32().NotNullable()
-            .WithColumn("totalSizeBytes").AsInt64().NotNullable()
-            .WithColumn("items").AsString(int.MaxValue).Nullable()
-            .WithColumn("skippedCount").AsInt32().NotNullable()
-            .Do();
+        if (DatabaseType == DatabaseType.SQLite)
+        {
+            Create.Table(AddDeletionLogTablePlan.TableName)
+                .WithColumn("id").AsInt32().NotNullable().Identity().PrimaryKey($"PK_{AddDeletionLogTablePlan.TableName}")
+                .WithColumn("occurredAt").AsDateTime().NotNullable()
+                .WithColumn("actionType").AsString(20).NotNullable()
+                .WithColumn("performedByUserId").AsInt32().NotNullable()
+                .WithColumn("itemCount").AsInt32().NotNullable()
+                .WithColumn("totalSizeBytes").AsInt64().NotNullable()
+                .WithColumn("items").AsString().Nullable()
+                .WithColumn("skippedCount").AsInt32().NotNullable()
+                .Do();
+        }
+        else
+        {
+            Create.Table(AddDeletionLogTablePlan.TableName)
+                .WithColumn("id").AsInt32().NotNullable().Identity().PrimaryKey($"PK_{AddDeletionLogTablePlan.TableName}")
+                .WithColumn("occurredAt").AsDateTime().NotNullable()
+                .WithColumn("actionType").AsString(20).NotNullable()
+                .WithColumn("performedByUserId").AsInt32().NotNullable()
+                .WithColumn("itemCount").AsInt32().NotNullable()
+                .WithColumn("totalSizeBytes").AsInt64().NotNullable()
+                .WithColumn("items").AsCustom("nvarchar(max)").Nullable()
+                .WithColumn("skippedCount").AsInt32().NotNullable()
+                .Do();
+        }
 
         return Task.CompletedTask;
     }
@@ -64,13 +81,14 @@ internal sealed class WidenDeletionLogItemsColumnMigration : AsyncMigrationBase
 
     protected override Task MigrateAsync()
     {
-        if (!TableExists(AddDeletionLogTablePlan.TableName))
+        if (DatabaseType == DatabaseType.SQLite || !TableExists(AddDeletionLogTablePlan.TableName))
         {
+            // SQLite's TEXT columns are already unlimited regardless of declared size.
             return Task.CompletedTask;
         }
 
         Alter.Table(AddDeletionLogTablePlan.TableName)
-            .AlterColumn("items").AsString(int.MaxValue).Nullable()
+            .AlterColumn("items").AsCustom("nvarchar(max)").Nullable()
             .Do();
 
         return Task.CompletedTask;
