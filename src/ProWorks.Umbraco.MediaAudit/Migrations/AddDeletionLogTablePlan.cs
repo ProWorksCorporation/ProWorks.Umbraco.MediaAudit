@@ -22,6 +22,7 @@ public sealed class AddDeletionLogTablePlan : PackageMigrationPlan
     protected override void DefinePlan()
     {
         To<AddDeletionLogTableMigration>("umbraco-media-audit-deletion-log-v1");
+        To<WidenDeletionLogItemsColumnMigration>("umbraco-media-audit-deletion-log-v2");
     }
 }
 
@@ -46,8 +47,30 @@ internal sealed class AddDeletionLogTableMigration : AsyncMigrationBase
             .WithColumn("performedByUserId").AsInt32().NotNullable()
             .WithColumn("itemCount").AsInt32().NotNullable()
             .WithColumn("totalSizeBytes").AsInt64().NotNullable()
-            .WithColumn("items").AsString().Nullable()
+            .WithColumn("items").AsString(int.MaxValue).Nullable()
             .WithColumn("skippedCount").AsInt32().NotNullable()
+            .Do();
+
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Widens the "items" column for installs that already created the table with the old, too-narrow definition.</summary>
+internal sealed class WidenDeletionLogItemsColumnMigration : AsyncMigrationBase
+{
+    public WidenDeletionLogItemsColumnMigration(IMigrationContext context) : base(context)
+    {
+    }
+
+    protected override Task MigrateAsync()
+    {
+        if (!TableExists(AddDeletionLogTablePlan.TableName))
+        {
+            return Task.CompletedTask;
+        }
+
+        Alter.Table(AddDeletionLogTablePlan.TableName)
+            .AlterColumn("items").AsString(int.MaxValue).Nullable()
             .Do();
 
         return Task.CompletedTask;
