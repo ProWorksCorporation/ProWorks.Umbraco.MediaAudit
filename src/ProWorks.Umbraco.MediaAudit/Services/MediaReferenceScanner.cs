@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CoreConstants = Umbraco.Cms.Core.Constants;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Services;
@@ -22,7 +21,7 @@ public sealed class MediaReferenceScanner : IMediaReferenceScanner
     {
         var guidWithHyphens = media.Key.ToString().ToLowerInvariant();
         var guidNoHyphens = media.Key.ToString("N").ToLowerInvariant();
-        var filePath = GetMediaFilePath(media)?.ToLowerInvariant();
+        var filePath = MediaFilePathResolver.GetFilePath(media)?.ToLowerInvariant();
         var fileName = filePath is null ? null : filePath.TrimEnd('/').Split('/').LastOrDefault();
 
         var results = new List<MediaUsageReference>();
@@ -91,35 +90,5 @@ public sealed class MediaReferenceScanner : IMediaReferenceScanner
         } while (pageIndex * PageSize < total);
 
         return Task.FromResult<IReadOnlyList<MediaUsageReference>>(results);
-    }
-
-    /// <summary>
-    /// Resolves the media item's stored file path. Built-in media types store this as a plain string
-    /// in "umbracoFile"; image-cropper-backed types store a JSON blob with a "src" field.
-    /// </summary>
-    private static string? GetMediaFilePath(IMedia media)
-    {
-        var raw = media.GetValue<string>(CoreConstants.Conventions.Media.File);
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        if (raw.TrimStart().StartsWith('{'))
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(raw);
-                return doc.RootElement.TryGetProperty("src", out var srcElement)
-                    ? srcElement.GetString()
-                    : null;
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
-        }
-
-        return raw;
     }
 }
