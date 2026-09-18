@@ -33,10 +33,18 @@ public sealed class DeletionLogEntry
     public required int SkippedCount { get; init; }
 }
 
-/// <summary>One affected item within a <see cref="DeletionLogEntry"/> - stored as compact JSON, not a join.</summary>
+/// <summary>
+/// One affected item within a <see cref="DeletionLogEntry"/> - stored as compact JSON, not a join.
+/// <see cref="Key"/> identifies an Umbraco media item (Delete/Purge actions); <see cref="RelativePath"/>
+/// identifies a disk-only file with no Umbraco media item (DiskDelete actions). Exactly one of the
+/// two is set, depending on <see cref="DeletionLogEntry.ActionType"/>.
+/// </summary>
 public sealed class DeletionLogItem
 {
-    public required Guid Key { get; init; }
+    public Guid? Key { get; init; }
+
+    /// <summary>Set instead of <see cref="Key"/> for a DiskDelete action's items.</summary>
+    public string? RelativePath { get; init; }
 
     public required string Name { get; init; }
 }
@@ -46,4 +54,5 @@ public enum DeletionLogActionType
 {
     Delete,
     Purge,
+    DiskDelete,
 }

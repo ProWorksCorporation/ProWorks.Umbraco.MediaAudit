@@ -19,6 +19,8 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
         private readonly IMediaDeleteService _deleteService;
         private readonly IMediaPurgeService _purgeService;
         private readonly IDeletionLogService _deletionLogService;
+        private readonly IDiskMediaAuditService _diskAuditService;
+        private readonly IDiskMediaDeleteService _diskDeleteService;
         private readonly IBackOfficeSecurityAccessor _backOfficeSecurityAccessor;
 
         public UmbracoMediaAuditApiController(
@@ -26,12 +28,16 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
             IMediaDeleteService deleteService,
             IMediaPurgeService purgeService,
             IDeletionLogService deletionLogService,
+            IDiskMediaAuditService diskAuditService,
+            IDiskMediaDeleteService diskDeleteService,
             IBackOfficeSecurityAccessor backOfficeSecurityAccessor)
         {
             _auditService = auditService;
             _deleteService = deleteService;
             _purgeService = purgeService;
             _deletionLogService = deletionLogService;
+            _diskAuditService = diskAuditService;
+            _diskDeleteService = diskDeleteService;
             _backOfficeSecurityAccessor = backOfficeSecurityAccessor;
         }
 
@@ -144,6 +150,40 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
             return Ok(result);
         }
 
+        /// <summary>GET /disk-summary - disk-media-api.md. Never null - "no run yet" has RunAt: null.</summary>
+        [HttpGet("disk-summary")]
+        [ProducesResponseType<DiskAuditRun>(StatusCodes.Status200OK)]
+        public ActionResult<DiskAuditRun> GetDiskSummary() => Ok(_diskAuditService.GetCurrentAudit());
+
+        /// <summary>POST /disk-scan - disk-media-api.md. Triggers a background disk scan; idempotent-in-intent while one is already Running.</summary>
+        [HttpPost("disk-scan")]
+        [ProducesResponseType<DiskAuditRun>(StatusCodes.Status202Accepted)]
+        public async Task<ActionResult<DiskAuditRun>> RunDiskScan(CancellationToken cancellationToken)
+        {
+            var run = await _diskAuditService.RunAuditAsync(cancellationToken);
+            return Accepted(run);
+        }
+
+        /// <summary>GET /disk-items - FR-003, disk-media-api.md. Every disk-only file from the last completed scan.</summary>
+        [HttpGet("disk-items")]
+        [ProducesResponseType<DiskMediaItemsResult>(StatusCodes.Status200OK)]
+        public ActionResult<DiskMediaItemsResult> GetDiskItems() => Ok(_diskAuditService.GetItems());
+
+        /// <summary>
+        /// POST /disk-delete - FR-005, FR-006, FR-007, FR-009, FR-010. Admin-only (same authorization
+        /// approach as Delete/Purge above). "Delete All" (User Story 3) is this same endpoint called
+        /// with every relativePath currently listed by GET /disk-items - see disk-media-api.md.
+        /// </summary>
+        [HttpPost("disk-delete")]
+        [Authorize(Policy = AuthorizationPolicies.RequireAdminAccess)]
+        [ProducesResponseType<DiskMediaDeleteResult>(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<ActionResult<DiskMediaDeleteResult>> DiskDelete([FromBody] DiskMediaPathsRequest request, CancellationToken cancellationToken)
+        {
+            var result = await _diskDeleteService.DeleteAsync(request.RelativePaths, CurrentUserId, cancellationToken);
+            return Ok(result);
+        }
+
         /// <summary>GET /deletion-log - FR-019. Admin-only, paged, newest first.</summary>
         [HttpGet("deletion-log")]
         [Authorize(Policy = AuthorizationPolicies.RequireAdminAccess)]
@@ -231,6 +271,12 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
     public sealed class MediaKeysRequest
     {
         public required IReadOnlyList<Guid> MediaKeys { get; init; }
+    }
+
+    /// <summary>Request body for POST /disk-delete (disk-media-api.md).</summary>
+    public sealed class DiskMediaPathsRequest
+    {
+        public required IReadOnlyList<string> RelativePaths { get; init; }
     }
 
     /// <summary>Response envelope for GET /deletion-log.</summary>

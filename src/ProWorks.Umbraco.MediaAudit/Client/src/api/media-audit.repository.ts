@@ -87,7 +87,7 @@ export interface MediaTypeOption {
   name: string;
 }
 
-export type DeletionLogActionType = "Delete" | "Purge";
+export type DeletionLogActionType = "Delete" | "Purge" | "DiskDelete";
 
 /** One item requested for delete/purge but skipped, and why (contracts §POST /delete, §POST /purge). */
 export interface MediaActionSkip {
@@ -109,8 +109,45 @@ export interface MediaPurgeResult {
 }
 
 export interface DeletionLogItem {
-  key: string;
+  key?: string | null;
+  relativePath?: string | null;
   name: string;
+}
+
+export type DiskAuditRunStatus = "Running" | "Complete" | "Failed";
+
+export interface DiskAuditRun {
+  runAt: string | null;
+  totalFilesOnDisk: number;
+  diskOnlyCount: number;
+  diskOnlySizeBytes: number;
+  status: DiskAuditRunStatus;
+  durationMs: number | null;
+  errorMessage: string | null;
+}
+
+export interface DiskMediaItem {
+  relativePath: string;
+  url: string;
+  sizeBytes: number;
+  lastModifiedUtc: string;
+}
+
+export interface DiskMediaItemsResult {
+  items: DiskMediaItem[];
+}
+
+/** One disk-only file requested for delete but skipped, and why (disk-media-api.md §POST /disk-delete). */
+export interface DiskMediaActionSkip {
+  relativePath: string;
+  /** "NotFound" (no longer on disk) or "NowOwned" (an Umbraco media item now claims this path). */
+  reason: string;
+}
+
+export interface DiskMediaDeleteResult {
+  deleted: string[];
+  skipped: DiskMediaActionSkip[];
+  logEntryId: number;
 }
 
 export interface DeletionLogEntry {
@@ -221,6 +258,16 @@ export const MediaAuditRepository = {
    */
   getDeletionLog: (page = 1, pageSize = 50) =>
     request<DeletionLogResponse>(`/deletion-log?page=${page}&pageSize=${pageSize}`),
+
+  getDiskSummary: () => request<DiskAuditRun>("/disk-summary"),
+
+  runDiskScan: () => request<DiskAuditRun>("/disk-scan", { method: "POST" }),
+
+  getDiskItems: () => request<DiskMediaItemsResult>("/disk-items"),
+
+  /** Admin-only (403 for non-admins) - FR-005, FR-006, FR-007, FR-009. Permanent - no Recycle Bin for disk-only files. */
+  deleteDiskItems: (relativePaths: string[]) =>
+    request<DiskMediaDeleteResult>("/disk-delete", { method: "POST", body: JSON.stringify({ relativePaths }) }),
 
   /**
    * GET /export returns a CSV file, not JSON - a plain `<a href>` can't carry the Bearer token
