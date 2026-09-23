@@ -75,7 +75,8 @@ export class MediaAuditDeletionLogElement extends UmbElementMixin(LitElement) {
 
     this._purging = true;
     try {
-      const result = await MediaAuditRepository.purgeItems(entry.items.map((item) => item.key));
+      const keys = entry.items.map((item) => item.key).filter((key): key is string => !!key);
+      const result = await MediaAuditRepository.purgeItems(keys);
       this._purgeConfirmEntry = undefined;
 
       if (result.skipped.length > 0) {
