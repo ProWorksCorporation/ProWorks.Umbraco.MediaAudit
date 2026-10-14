@@ -26,7 +26,9 @@ const POLL_INTERVAL_MS = 1500;
  * were never Umbraco media items and so have no Recycle Bin.
  *
  * `isAdmin` is passed down from the parent dashboard, which already derives it from whether
- * GET /deletion-log succeeds - not re-derived here.
+ * GET /deletion-log succeeds - not re-derived here. The scan itself is started from the dashboard's
+ * main toolbar via `scan()`; this panel reports progress back with a `disk-scan-state` event and
+ * asks to be hidden with `disk-panel-close`.
  */
 @customElement("media-audit-disk-panel")
 export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
@@ -51,6 +53,9 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
   @state()
   private _deleting = false;
 
+  @state()
+  private _isExporting = false;
+
   #notificationContext?: typeof UMB_NOTIFICATION_CONTEXT.TYPE;
   #pollHandle?: ReturnType<typeof setTimeout>;
 
@@ -63,7 +68,7 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.#loadSummary();
+    this.#resumeIfRunning();
     this.#loadItems();
   }
 
@@ -71,13 +76,29 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
     super.disconnectedCallback();
     if (this.#pollHandle) {
       clearTimeout(this.#pollHandle);
+      this.#pollHandle = undefined;
+    }
+  }
+
+  override updated(changed: Map<PropertyKey, unknown>): void {
+    super.updated(changed);
+    if (changed.has("_isScanning")) {
+      this.dispatchEvent(new CustomEvent("disk-scan-state", { detail: { scanning: this._isScanning }, bubbles: true, composed: true }));
+    }
+  }
+
+  /** A scan can still be running server-side if this panel was hidden mid-scan - pick polling back up. */
+  async #resumeIfRunning() {
+    await this.#loadSummary();
+    if (this._run?.status === "Running" && !this.#pollHandle) {
+      this._isScanning = true;
+      this.#pollUntilComplete();
     }
   }
 
   async #loadSummary() {
     try {
       this._run = await MediaAuditRepository.getDiskSummary();
-      this._isScanning = this._run.status === "Running";
     } catch (error) {
       console.error("[media-audit] failed to load disk summary", error);
     }
@@ -92,7 +113,9 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
     }
   }
 
-  #onScan = async () => {
+  async scan() {
+    if (this._isScanning) return;
+
     this._isScanning = true;
     try {
       this._run = await MediaAuditRepository.runDiskScan();
@@ -106,10 +129,11 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
         },
       });
     }
-  };
+  }
 
   #pollUntilComplete() {
     this.#pollHandle = setTimeout(async () => {
+      this.#pollHandle = undefined;
       await this.#loadSummary();
 
       if (this._run?.status === "Running") {
@@ -138,6 +162,26 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
       }
     }, POLL_INTERVAL_MS);
   }
+
+  #onExport = async () => {
+    this._isExporting = true;
+    try {
+      await MediaAuditRepository.exportDiskCsv();
+    } catch (error) {
+      this.#notificationContext?.peek("danger", {
+        data: {
+          headline: "Export failed",
+          message: error instanceof Error ? error.message : String(error),
+        },
+      });
+    } finally {
+      this._isExporting = false;
+    }
+  };
+
+  #onClose = () => {
+    this.dispatchEvent(new CustomEvent("disk-panel-close", { bubbles: true, composed: true }));
+  };
 
   #onToggleSelect = (e: Event, item: DiskMediaItem) => {
     const checked = (e.target as HTMLInputElement).checked;
@@ -234,13 +278,12 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
 
         <div class="toolbar">
           <uui-button
-            look="primary"
-            color="default"
-            .state=${this._isScanning ? "waiting" : undefined}
-            ?disabled=${this._isScanning}
-            @click=${this.#onScan}
+            look="secondary"
+            .state=${this._isExporting ? "waiting" : undefined}
+            ?disabled=${this._isExporting || this._isScanning || this._items.length === 0}
+            @click=${this.#onExport}
           >
-            Scan Disk Media
+            Export CSV
           </uui-button>
 
           ${this.isAdmin
@@ -272,6 +315,8 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
                 (${this.#formatBytes(this._run.diskOnlySizeBytes)})`
               : html`No disk scan has run yet this session.`}
           </span>
+
+          <uui-button class="close" look="secondary" compact @click=${this.#onClose}>Hide</uui-button>
         </div>
 
         ${this._deleteConfirmOpen
@@ -369,6 +414,10 @@ export class MediaAuditDiskPanelElement extends UmbElementMixin(LitElement) {
       .last-refreshed {
         color: var(--uui-color-text-alt);
         font-size: var(--uui-type-small-size);
+      }
+
+      .close {
+        margin-left: auto;
       }
 
       .grid {

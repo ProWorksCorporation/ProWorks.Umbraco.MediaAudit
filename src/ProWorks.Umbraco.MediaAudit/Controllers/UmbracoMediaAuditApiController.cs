@@ -169,6 +169,14 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
         [ProducesResponseType<DiskMediaItemsResult>(StatusCodes.Status200OK)]
         public ActionResult<DiskMediaItemsResult> GetDiskItems() => Ok(_diskAuditService.GetItems());
 
+        /// <summary>GET /disk-export - disk-media-api.md. Every disk-only file from the last completed scan, as a downloadable CSV.</summary>
+        [HttpGet("disk-export")]
+        public IActionResult DiskExport()
+        {
+            var csv = BuildDiskCsv(_diskAuditService.GetItems().Items);
+            return File(Encoding.UTF8.GetBytes(csv), "text/csv", "disk-media-export.csv");
+        }
+
         /// <summary>
         /// POST /disk-delete - FR-005, FR-006, FR-007, FR-009, FR-010. Admin-only (same authorization
         /// approach as Delete/Purge above). "Delete All" (User Story 3) is this same endpoint called
@@ -227,6 +235,24 @@ namespace ProWorks.Umbraco.MediaAudit.Controllers
                     CsvField(item.CreateDate.ToString("O")),
                     CsvField(item.UpdateDate.ToString("O")),
                     CsvField(usedOnPages),
+                }));
+            }
+
+            return sb.ToString();
+        }
+
+        private static string BuildDiskCsv(IReadOnlyList<DiskMediaItem> items)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("RelativePath,Url,SizeBytes,LastModifiedUtc");
+            foreach (var item in items)
+            {
+                sb.AppendLine(string.Join(",", new[]
+                {
+                    CsvField(item.RelativePath),
+                    CsvField(item.Url),
+                    CsvField(item.SizeBytes.ToString()),
+                    CsvField(item.LastModifiedUtc.ToString("O")),
                 }));
             }
 

@@ -8,7 +8,7 @@ export function setAuthContext(context: UmbAuthContext): void {
   authContext = context;
 }
 
-/** Thrown by request()/exportCsv() on a non-OK response - carries the HTTP status so callers can distinguish e.g. 403 (not an admin) from other failures. */
+/** Thrown by request()/downloadCsv() on a non-OK response - carries the HTTP status so callers can distinguish e.g. 403 (not an admin) from other failures. */
 export class MediaAuditApiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
@@ -226,6 +226,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return text ? (JSON.parse(text) as T) : (undefined as T);
 }
 
+/**
+ * CSV endpoints return a file, not JSON - a plain `<a href>` can't carry the Bearer token required
+ * (see module doc comment), so this fetches it as a Blob and triggers the download via a synthetic,
+ * immediately-discarded anchor element instead.
+ */
+async function downloadCsv(path: string, fileName: string): Promise<void> {
+  const { headers, credentials } = await authHeaders();
+  const response = await fetch(`${API_BASE}${path}`, { credentials, headers });
+
+  if (!response.ok) {
+    throw new MediaAuditApiError(response.status, `Media Audit API request failed: GET ${path} -> ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export const MediaAuditRepository = {
   getSummary: () => request<AuditRun>("/summary"),
 
@@ -269,28 +294,9 @@ export const MediaAuditRepository = {
   deleteDiskItems: (relativePaths: string[]) =>
     request<DiskMediaDeleteResult>("/disk-delete", { method: "POST", body: JSON.stringify({ relativePaths }) }),
 
-  /**
-   * GET /export returns a CSV file, not JSON - a plain `<a href>` can't carry the Bearer token
-   * required (see module doc comment), so this fetches it as a Blob and triggers the download via
-   * a synthetic, immediately-discarded anchor element instead.
-   */
-  async exportCsv(query: MediaAuditItemsQuery = {}): Promise<void> {
-    const { headers, credentials } = await authHeaders();
-    const response = await fetch(`${API_BASE}/export${buildQueryString(query, false)}`, { credentials, headers });
+  /** Every disk-only file from the last completed scan, as a CSV download. */
+  exportDiskCsv: () => downloadCsv("/disk-export", "disk-media-export.csv"),
 
-    if (!response.ok) {
-      throw new Error(`Media Audit API request failed: GET /export -> ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    try {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "media-audit-export.csv";
-      link.click();
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  },
+  exportCsv: (query: MediaAuditItemsQuery = {}) =>
+    downloadCsv(`/export${buildQueryString(query, false)}`, "media-audit-export.csv"),
 };

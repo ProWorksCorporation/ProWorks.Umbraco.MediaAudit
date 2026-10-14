@@ -23,6 +23,12 @@ future version needs it here too).
 { "items": [ { "relativePath": "1234/old-upload.jpg", "url": "/media/1234/old-upload.jpg", "sizeBytes": 48213, "lastModifiedUtc": "2025-01-01T00:00:00Z" } ] }
 ```
 
+## GET /disk-export
+
+Same rows as GET /disk-items, as a downloadable `text/csv` file (`disk-media-export.csv`)
+with the columns `RelativePath,Url,SizeBytes,LastModifiedUtc`. Not admin-only - mirrors GET /export
+for the usage audit, and anyone who can view the list can export it.
+
 ## POST /disk-delete
 
 Admin-only (403 for non-admins, same policy as POST /delete). Body: `{ "relativePaths": ["1234/old-upload.jpg"] }`.
