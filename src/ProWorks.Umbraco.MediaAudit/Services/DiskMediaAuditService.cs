@@ -44,7 +44,9 @@ public sealed class DiskMediaAuditService : IDiskMediaAuditService
             _currentRun = new DiskAuditRun { Status = DiskAuditRunStatus.Running };
         }
 
-        _ = Task.Run(() => ExecuteAuditAsync(cancellationToken), cancellationToken);
+        // Not the caller's token: that's the HTTP request's, which is cancelled once the 202 is sent
+        // (IIS in-process does this on completion), and a cancelled scan would sit at Running forever.
+        _ = Task.Run(() => ExecuteAuditAsync(CancellationToken.None));
 
         return Task.FromResult(GetCurrentAudit());
     }

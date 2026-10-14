@@ -154,4 +154,29 @@ public class DiskMediaAuditServiceTests
         Assert.False(service.IsDiskOnly("owned.jpg"));
         Assert.True(service.IsDiskOnly("not-owned.jpg"));
     }
+
+    [Fact]
+    public async Task RunAuditAsync_completes_even_when_the_triggering_request_token_is_cancelled()
+    {
+        var (service, scanner) = CreateService(Array.Empty<IMedia>(), Array.Empty<MediaFileEntry>());
+        scanner.Setup(s => s.ScanAsync(It.IsAny<CancellationToken>()))
+            .Returns(async (CancellationToken token) =>
+            {
+                await Task.Delay(50);
+                token.ThrowIfCancellationRequested();
+                return (IReadOnlyList<MediaFileEntry>)new List<MediaFileEntry>();
+            });
+
+        using var requestAborted = new CancellationTokenSource();
+        await service.RunAuditAsync(requestAborted.Token);
+        requestAborted.Cancel();
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (service.GetCurrentAudit().Status == DiskAuditRunStatus.Running && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Equal(DiskAuditRunStatus.Complete, service.GetCurrentAudit().Status);
+    }
 }
