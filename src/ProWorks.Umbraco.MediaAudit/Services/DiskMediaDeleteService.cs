@@ -1,3 +1,4 @@
+using Umbraco.Cms.Core.IO;
 using ProWorks.Umbraco.MediaAudit.Models;
 
 namespace ProWorks.Umbraco.MediaAudit.Services;
@@ -52,6 +53,8 @@ public sealed class DiskMediaDeleteService : IDiskMediaDeleteService
             fileSystem.DeleteFile(relativePath);
         }
 
+        RemoveEmptiedFolders(fileSystem, deleted);
+
         var logEntryId = _deletionLogService.LogAction(
             DeletionLogActionType.DiskDelete,
             performingUserId,
@@ -60,5 +63,40 @@ public sealed class DiskMediaDeleteService : IDiskMediaDeleteService
             skipped.Count);
 
         return Task.FromResult(new DiskMediaDeleteResult { Deleted = deleted, Skipped = skipped, LogEntryId = logEntryId });
+    }
+
+    /// <summary>
+    /// Removes each folder a deleted file lived in once it's completely empty, then walks up through
+    /// parents that became empty as a result - never the media root, and never a folder holding
+    /// anything else. Emptiness is checked here rather than relying on a non-recursive delete
+    /// failing, since Azure blob storage always deletes recursively.
+    /// </summary>
+    private static void RemoveEmptiedFolders(IFileSystem fileSystem, IEnumerable<string> deletedPaths)
+    {
+        var folders = deletedPaths
+            .Select(GetParentFolder)
+            .Where(folder => folder.Length > 0)
+            .Distinct()
+            .OrderByDescending(folder => folder.Count(c => c == '/'));
+
+        foreach (var startFolder in folders)
+        {
+            var folder = startFolder;
+            while (folder.Length > 0
+                && fileSystem.DirectoryExists(folder)
+                && !fileSystem.GetFiles(folder).Any()
+                && !fileSystem.GetDirectories(folder).Any())
+            {
+                fileSystem.DeleteDirectory(folder, false);
+                folder = GetParentFolder(folder);
+            }
+        }
+    }
+
+    private static string GetParentFolder(string relativePath)
+    {
+        var normalized = relativePath.Replace('\\', '/').TrimEnd('/');
+        var lastSlash = normalized.LastIndexOf('/');
+        return lastSlash < 0 ? string.Empty : normalized[..lastSlash];
     }
 }

@@ -81,4 +81,84 @@ public class DiskMediaDeleteServiceTests
             d => d.LogAction(DeletionLogActionType.DiskDelete, 7, It.Is<IReadOnlyList<DeletionLogItem>>(items => items.Count == 0), 0, 1),
             Times.Once);
     }
+
+    private static void SetUpDeletableFile(Mock<IFileSystem> fileSystem, Mock<IDiskMediaAuditService> auditService, string path)
+    {
+        fileSystem.Setup(f => f.FileExists(path)).Returns(true);
+        auditService.Setup(a => a.IsDiskOnly(path)).Returns(true);
+    }
+
+    private static void SetUpDirectory(Mock<IFileSystem> fileSystem, string path, string[]? files = null, string[]? directories = null)
+    {
+        fileSystem.Setup(f => f.DirectoryExists(path)).Returns(true);
+        fileSystem.Setup(f => f.GetFiles(path)).Returns(files ?? Array.Empty<string>());
+        fileSystem.Setup(f => f.GetDirectories(path)).Returns(directories ?? Array.Empty<string>());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_a_folder_left_empty_by_the_delete()
+    {
+        var (service, fileSystem, auditService, _) = CreateService();
+        SetUpDeletableFile(fileSystem, auditService, "zz-test/a.png");
+        SetUpDeletableFile(fileSystem, auditService, "zz-test/b.png");
+        SetUpDirectory(fileSystem, "zz-test");
+
+        await service.DeleteAsync(new[] { "zz-test/a.png", "zz-test/b.png" }, performingUserId: 7);
+
+        fileSystem.Verify(f => f.DeleteDirectory("zz-test", false), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_keeps_a_folder_that_still_holds_other_files()
+    {
+        var (service, fileSystem, auditService, _) = CreateService();
+        SetUpDeletableFile(fileSystem, auditService, "abc123/orphan-sidecar.jpg");
+        SetUpDirectory(fileSystem, "abc123", files: new[] { "abc123/real-upload.jpg" });
+
+        await service.DeleteAsync(new[] { "abc123/orphan-sidecar.jpg" }, performingUserId: 7);
+
+        fileSystem.Verify(f => f.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        fileSystem.Verify(f => f.DeleteDirectory(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_removes_newly_empty_parent_folders_but_stops_at_one_that_is_not_empty()
+    {
+        var (service, fileSystem, auditService, _) = CreateService();
+        SetUpDeletableFile(fileSystem, auditService, "outer/inner/deep/orphan.jpg");
+        SetUpDirectory(fileSystem, "outer/inner/deep");
+        SetUpDirectory(fileSystem, "outer/inner");
+        SetUpDirectory(fileSystem, "outer", files: new[] { "outer/keep.jpg" });
+
+        await service.DeleteAsync(new[] { "outer/inner/deep/orphan.jpg" }, performingUserId: 7);
+
+        fileSystem.Verify(f => f.DeleteDirectory("outer/inner/deep", false), Times.Once);
+        fileSystem.Verify(f => f.DeleteDirectory("outer/inner", false), Times.Once);
+        fileSystem.Verify(f => f.DeleteDirectory("outer", It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_never_removes_the_media_root()
+    {
+        var (service, fileSystem, auditService, _) = CreateService();
+        SetUpDeletableFile(fileSystem, auditService, "orphan-root.jpg");
+        SetUpDirectory(fileSystem, "");
+
+        await service.DeleteAsync(new[] { "orphan-root.jpg" }, performingUserId: 7);
+
+        fileSystem.Verify(f => f.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+        fileSystem.Verify(f => f.DeleteDirectory(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_leaves_the_folder_of_a_skipped_file_alone()
+    {
+        var (service, fileSystem, _, _) = CreateService();
+        fileSystem.Setup(f => f.FileExists("zz-test/gone.png")).Returns(false);
+        SetUpDirectory(fileSystem, "zz-test");
+
+        await service.DeleteAsync(new[] { "zz-test/gone.png" }, performingUserId: 7);
+
+        fileSystem.Verify(f => f.DeleteDirectory(It.IsAny<string>(), It.IsAny<bool>()), Times.Never);
+    }
 }

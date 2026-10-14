@@ -98,8 +98,10 @@ re-scan returns an empty list.
   not deleted, if it is no longer disk-only.
 - What happens to media that is currently in Umbraco's Recycle Bin? Its underlying file is still a
   legitimate Umbraco-owned file (recoverable) and MUST NOT be listed as disk-only.
-- What happens to empty subfolders left behind after their files are deleted? Out of scope for
-  this feature (see Assumptions) - only files are removed, never directories.
+- What happens to empty subfolders left behind after their files are deleted? A folder that a
+  delete leaves completely empty is removed, along with any parent folders that become empty as a
+  result (see FR-011). Folders still holding anything, folders unrelated to the delete, and the
+  media root itself are never removed.
 - What happens with a very large media library (tens of thousands of files)? The scan runs as a
   background operation with the same "Running" progress pattern as the existing usage audit,
   rather than blocking the dashboard.
@@ -131,8 +133,10 @@ re-scan returns an empty list.
   existing Delete/Purge actions in this package.
 - **FR-010**: Every disk-only delete action (selected or all) MUST be recorded in the existing
   Deletion Log, distinguishable from the existing Delete/Purge action types.
-- **FR-011**: System MUST NOT delete directories - only individual files - and MUST NOT modify or
-  delete any file that does correspond to an existing Umbraco media item.
+- **FR-011**: System MUST NOT modify or delete any file that does correspond to an existing Umbraco
+  media item. After deleting files, it MUST remove each folder that contained a deleted file only if
+  that folder is now completely empty, then repeat for each parent that becomes empty - stopping at
+  the first non-empty folder and never removing the media root.
 
 ### Key Entities
 
@@ -161,8 +165,8 @@ re-scan returns an empty list.
   for this installation (local disk by default) - this feature audits that file system through
   Umbraco's own file-system abstraction rather than assuming a specific physical folder path, so it
   keeps working if a site is later configured to use a different storage provider.
-- Only files are audited/deleted; empty directories left behind are not cleaned up automatically in
-  this version.
+- Only files are audited; directories are removed only when a delete leaves them completely empty
+  (FR-011).
 - A file's "ownership" by an Umbraco media item is determined the same way the existing package
   already resolves a media item's stored file path (its `umbracoFile` value, including the
   image-cropper JSON shape), so any file path a media item currently claims - trashed or not - is
