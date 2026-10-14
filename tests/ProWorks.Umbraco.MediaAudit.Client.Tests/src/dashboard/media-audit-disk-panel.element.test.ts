@@ -121,4 +121,101 @@ describe("media-audit-disk-panel", () => {
     const deleteAllButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.trim() === "Delete All")!;
     expect(deleteAllButton.hasAttribute("disabled")).to.be.true;
   });
+  it("scan() starts a disk scan and reports scanning progress to the dashboard", async () => {
+    const requests: string[] = [];
+    restoreFetch = stubFetch((url, init) => {
+      requests.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/disk-scan")) return jsonResponse(makeDiskAuditRun({ status: "Running" }));
+      if (url.endsWith("/disk-summary")) return jsonResponse(makeDiskAuditRun({ runAt: null }));
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: [] });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const states: boolean[] = [];
+    const el = await fixture<MediaAuditDiskPanelElement>(
+      html`<media-audit-disk-panel @disk-scan-state=${(e: CustomEvent<{ scanning: boolean }>) => states.push(e.detail.scanning)}></media-audit-disk-panel>`
+    );
+    await aTimeout(0);
+
+    await el.scan();
+    await el.updateComplete;
+
+    expect(requests.some((r) => r.startsWith("POST") && r.endsWith("/disk-scan"))).to.be.true;
+    expect(states.at(-1)).to.be.true;
+  });
+
+  it("resumes polling when shown while a scan is still running server-side", async () => {
+    let summaryCalls = 0;
+    restoreFetch = stubFetch((url) => {
+      if (url.endsWith("/disk-summary")) {
+        summaryCalls++;
+        return jsonResponse(makeDiskAuditRun(summaryCalls === 1 ? { status: "Running" } : { status: "Complete", diskOnlyCount: 1 }));
+      }
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: summaryCalls > 1 ? [makeDiskItem({ relativePath: "late.jpg" })] : [] });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const el = await fixture<MediaAuditDiskPanelElement>(html`<media-audit-disk-panel></media-audit-disk-panel>`);
+    await aTimeout(1800);
+    await el.updateComplete;
+
+    expect(summaryCalls).to.be.greaterThan(1);
+    expect(el.shadowRoot!.textContent).to.contain("late.jpg");
+  });
+
+  it("Export CSV is disabled when the disk-only list is empty", async () => {
+    restoreFetch = stubFetch((url) => {
+      if (url.endsWith("/disk-summary")) return jsonResponse(makeDiskAuditRun({ diskOnlyCount: 0 }));
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: [] });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const el = await fixture<MediaAuditDiskPanelElement>(html`<media-audit-disk-panel></media-audit-disk-panel>`);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    const exportButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.trim() === "Export CSV")!;
+    expect(exportButton.hasAttribute("disabled")).to.be.true;
+  });
+
+  it("Export CSV downloads from /disk-export", async () => {
+    const requests: string[] = [];
+    restoreFetch = stubFetch((url) => {
+      requests.push(url);
+      if (url.endsWith("/disk-summary")) return jsonResponse(makeDiskAuditRun());
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: [makeDiskItem()] });
+      if (url.endsWith("/disk-export")) return new Response("RelativePath,Url,SizeBytes,LastModifiedUtc", { headers: { "Content-Type": "text/csv" } });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const el = await fixture<MediaAuditDiskPanelElement>(html`<media-audit-disk-panel></media-audit-disk-panel>`);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    const exportButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.trim() === "Export CSV")!;
+    await clickUuiButton(exportButton);
+    await aTimeout(0);
+
+    expect(requests.some((url) => url.endsWith("/disk-export"))).to.be.true;
+  });
+
+  it("Hide asks the dashboard to close the panel", async () => {
+    restoreFetch = stubFetch((url) => {
+      if (url.endsWith("/disk-summary")) return jsonResponse(makeDiskAuditRun());
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: [] });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    let closed = false;
+    const el = await fixture<MediaAuditDiskPanelElement>(
+      html`<media-audit-disk-panel @disk-panel-close=${() => (closed = true)}></media-audit-disk-panel>`
+    );
+    await aTimeout(0);
+    await el.updateComplete;
+
+    const hideButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.trim() === "Hide")!;
+    await clickUuiButton(hideButton);
+
+    expect(closed).to.be.true;
+  });
 });

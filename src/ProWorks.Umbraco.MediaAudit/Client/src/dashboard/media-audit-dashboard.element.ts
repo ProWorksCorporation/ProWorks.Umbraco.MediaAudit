@@ -25,6 +25,7 @@ import {
 import "./media-audit-detail.element.js";
 import "./media-audit-delete-confirm.element.js";
 import "./media-audit-deletion-log.element.js";
+import type { MediaAuditDiskPanelElement } from "./media-audit-disk-panel.element.js";
 import "./media-audit-disk-panel.element.js";
 
 const POLL_INTERVAL_MS = 1500;
@@ -113,6 +114,9 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
 
   @state()
   private _showDiskPanel = false;
+
+  @state()
+  private _isDiskScanning = false;
 
   #notificationContext?: typeof UMB_NOTIFICATION_CONTEXT.TYPE;
   #pollHandle?: ReturnType<typeof setTimeout>;
@@ -318,8 +322,19 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
     this._showDeletionLog = !this._showDeletionLog;
   };
 
-  #onToggleDiskPanel = () => {
-    this._showDiskPanel = !this._showDiskPanel;
+  #onScanDiskMedia = async () => {
+    this._showDiskPanel = true;
+    await this.updateComplete;
+    this.shadowRoot?.querySelector<MediaAuditDiskPanelElement>("media-audit-disk-panel")?.scan();
+  };
+
+  #onDiskScanState = (e: CustomEvent<{ scanning: boolean }>) => {
+    this._isDiskScanning = e.detail.scanning;
+  };
+
+  #onDiskPanelClose = () => {
+    this._showDiskPanel = false;
+    this._isDiskScanning = false;
   };
 
   #onRunAudit = async () => {
@@ -413,6 +428,16 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
           </uui-button>
 
           <uui-button
+            look="primary"
+            color="default"
+            .state=${this._isDiskScanning ? "waiting" : undefined}
+            ?disabled=${this._isDiskScanning}
+            @click=${this.#onScanDiskMedia}
+          >
+            Scan Disk Media
+          </uui-button>
+
+          <uui-button
             look="secondary"
             .state=${this._isExporting ? "waiting" : undefined}
             ?disabled=${this._isExporting || this._totalItems === 0}
@@ -441,10 +466,6 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
               `
             : nothing}
 
-          <uui-button look="secondary" @click=${this.#onToggleDiskPanel}>
-            ${this._showDiskPanel ? "Hide" : "Audit"} Disk Media
-          </uui-button>
-
           ${this._isRunning ? html`<uui-loader></uui-loader>` : nothing}
 
           <span class="last-refreshed">
@@ -455,7 +476,15 @@ export class MediaAuditDashboardElement extends UmbElementMixin(LitElement) {
         </div>
 
         ${this._isAdmin && this._showDeletionLog ? html`<media-audit-deletion-log></media-audit-deletion-log>` : nothing}
-        ${this._showDiskPanel ? html`<media-audit-disk-panel .isAdmin=${this._isAdmin}></media-audit-disk-panel>` : nothing}
+        ${this._showDiskPanel
+          ? html`
+              <media-audit-disk-panel
+                .isAdmin=${this._isAdmin}
+                @disk-scan-state=${this.#onDiskScanState}
+                @disk-panel-close=${this.#onDiskPanelClose}
+              ></media-audit-disk-panel>
+            `
+          : nothing}
 
         <div class="filter-bar">
           ${this._run ? this.#renderSummary(this._run) : nothing}
