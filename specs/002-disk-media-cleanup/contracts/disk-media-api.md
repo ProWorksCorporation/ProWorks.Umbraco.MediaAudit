@@ -33,7 +33,8 @@ for the usage audit, and anyone who can view the list can export it.
 
 Admin-only (403 for non-admins, same policy as POST /delete). Body: `{ "relativePaths": ["1234/old-upload.jpg"] }`.
 Deletes exactly the given files after re-verifying each is still present and still disk-only
-(FR-008); skips and reports otherwise. Always writes exactly one `DeletionLogEntry`
+(FR-008); skips and reports otherwise. Folders the delete leaves completely empty are then removed,
+along with parents that become empty, never the media root (FR-011). Always writes exactly one `DeletionLogEntry`
 (`actionType: "DiskDelete"`), even if every item was skipped.
 
 ```json

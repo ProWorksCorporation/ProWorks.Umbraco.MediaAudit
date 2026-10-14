@@ -80,4 +80,23 @@ public class DiskMediaCleanupIntegrationTests : MediaAuditIntegrationTestBase
         Assert.That(entry.ActionType, Is.EqualTo(Models.DeletionLogActionType.DiskDelete));
         Assert.That(entry.ItemCount, Is.EqualTo(1));
     }
+
+    [Test]
+    public async Task DeleteAsync_removes_folders_it_left_empty_but_keeps_ones_with_other_files()
+    {
+        var root = $"folder-cleanup-{Guid.NewGuid():N}";
+        WriteOrphanFile($"{root}/emptied/inner/orphan.txt");
+        WriteOrphanFile($"{root}/shared/orphan.txt");
+        WriteOrphanFile($"{root}/shared/keep.txt", "keep");
+        await RunAndWaitAsync(DiskAuditService);
+
+        await DiskDeleteService.DeleteAsync(new[] { $"{root}/emptied/inner/orphan.txt", $"{root}/shared/orphan.txt" }, performingUserId: -1);
+
+        var fileSystem = MediaFileManager.FileSystem;
+        Assert.That(fileSystem.DirectoryExists($"{root}/emptied/inner"), Is.False);
+        Assert.That(fileSystem.DirectoryExists($"{root}/emptied"), Is.False);
+        Assert.That(fileSystem.DirectoryExists($"{root}/shared"), Is.True);
+        Assert.That(fileSystem.FileExists($"{root}/shared/keep.txt"), Is.True);
+        Assert.That(fileSystem.DirectoryExists(root), Is.True);
+    }
 }
