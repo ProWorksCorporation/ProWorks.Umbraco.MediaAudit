@@ -10,14 +10,15 @@
     <PackageId>ProWorks.Umbraco.MediaAudit</PackageId>
     <Product>ProWorks.Umbraco.MediaAudit</Product>
     <Title>ProWorks Umbraco Media Audit</Title>
-    <Version>18.0.2</Version>
+    <Version>18.1.0</Version>
     <Authors>ProWorks.Umbraco.MediaAudit contributors</Authors>
     <Description>Audit your Umbraco CMS (v18+) media library right from the backoffice: classify every item as Used or Unused, drill into exactly what references it, and safely delete or purge the rest with a full accountability log.</Description>
     <PackageReleaseNotes>Requires Umbraco CMS 18.0+. This release will not install on Umbraco 17 - the 1.x line on the main branch continues to be maintained separately for Umbraco 17.
 
-- Fixed the items column on UmbracoMediaAuditDeletionLog truncating/rejecting inserts on SQL Server once a delete/purge batch's JSON payload exceeds 255 characters. Widened to nvarchar(max) for new installs, with a migration step to widen it for existing installs too.
+- New: Disk-Only Media Cleanup. "Scan Disk Media" finds files in the media folder that no Umbraco media item owns (Recycle Bin items still count as owners), lists them with size and date, and lets admins delete selected files or all of them, with CSV export. Folders left empty by a delete are removed (never the media root). Every delete is recorded in the Deletion Log as a DiskDelete entry.
+- Fixed the media audit and disk scan sometimes staying at "Running" forever under IIS.
 
-Full release notes: https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/releases/tag/v18.0.2</PackageReleaseNotes>
+Full release notes: https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit/releases/tag/v18.1.0</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/ProWorksCorporation/ProWorks.Umbraco.MediaAudit</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>umbraco-marketplace umbraco-package media-audit</PackageTags>
