@@ -30,6 +30,10 @@ public abstract class MediaAuditIntegrationTestBase : UmbracoIntegrationTest
             ["Tests:Database:PrepareThreadCount"] = "1",
             ["Tests:Database:SchemaDatabaseCount"] = "1",
             ["Tests:Database:EmptyDatabasesCount"] = "0",
+            // RunPendingPackageMigrationsForThisPackage below runs the package migrations explicitly;
+            // leaving Umbraco's UnattendedUpgradeBackgroundService on as well races it on the same
+            // SQLite database and both CREATE TABLE calls deadlock, hanging the first test forever.
+            ["Umbraco:CMS:Unattended:PackageMigrationsUnattended"] = "false",
         });
     }
 

@@ -27,6 +27,11 @@ namespace ProWorks.Umbraco.MediaAudit.Composers
             builder.Services.AddSingleton<IMediaPurgeService, MediaPurgeService>();
             builder.PackageMigrationPlans().Add<AddDeletionLogTablePlan>();
 
+            builder.Services.AddSingleton<IMediaFileSystemProvider, MediaFileSystemProvider>();
+            builder.Services.AddSingleton<IDiskMediaScanner, DiskMediaScanner>();
+            builder.Services.AddSingleton<IDiskMediaAuditService, DiskMediaAuditService>();
+            builder.Services.AddSingleton<IDiskMediaDeleteService, DiskMediaDeleteService>();
+
             builder.Services.AddSingleton<IOperationIdHandler, CustomOperationHandler>();
 
             builder.Services.Configure<SwaggerGenOptions>(opt =>
