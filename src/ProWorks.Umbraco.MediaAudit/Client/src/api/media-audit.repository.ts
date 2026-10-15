@@ -8,7 +8,7 @@ export function setAuthContext(context: UmbAuthContext): void {
   authContext = context;
 }
 
-/** Thrown by request()/exportCsv() on a non-OK response - carries the HTTP status so callers can distinguish e.g. 403 (not an admin) from other failures. */
+/** Thrown by request()/downloadCsv() on a non-OK response - carries the HTTP status so callers can distinguish e.g. 403 (not an admin) from other failures. */
 export class MediaAuditApiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
@@ -87,7 +87,7 @@ export interface MediaTypeOption {
   name: string;
 }
 
-export type DeletionLogActionType = "Delete" | "Purge";
+export type DeletionLogActionType = "Delete" | "Purge" | "DiskDelete";
 
 /** One item requested for delete/purge but skipped, and why (contracts §POST /delete, §POST /purge). */
 export interface MediaActionSkip {
@@ -109,8 +109,45 @@ export interface MediaPurgeResult {
 }
 
 export interface DeletionLogItem {
-  key: string;
+  key?: string | null;
+  relativePath?: string | null;
   name: string;
+}
+
+export type DiskAuditRunStatus = "Running" | "Complete" | "Failed";
+
+export interface DiskAuditRun {
+  runAt: string | null;
+  totalFilesOnDisk: number;
+  diskOnlyCount: number;
+  diskOnlySizeBytes: number;
+  status: DiskAuditRunStatus;
+  durationMs: number | null;
+  errorMessage: string | null;
+}
+
+export interface DiskMediaItem {
+  relativePath: string;
+  url: string;
+  sizeBytes: number;
+  lastModifiedUtc: string;
+}
+
+export interface DiskMediaItemsResult {
+  items: DiskMediaItem[];
+}
+
+/** One disk-only file requested for delete but skipped, and why (disk-media-api.md §POST /disk-delete). */
+export interface DiskMediaActionSkip {
+  relativePath: string;
+  /** "NotFound" (no longer on disk) or "NowOwned" (an Umbraco media item now claims this path). */
+  reason: string;
+}
+
+export interface DiskMediaDeleteResult {
+  deleted: string[];
+  skipped: DiskMediaActionSkip[];
+  logEntryId: number;
 }
 
 export interface DeletionLogEntry {
@@ -189,6 +226,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return text ? (JSON.parse(text) as T) : (undefined as T);
 }
 
+/**
+ * CSV endpoints return a file, not JSON - a plain `<a href>` can't carry the Bearer token required
+ * (see module doc comment), so this fetches it as a Blob and triggers the download via a synthetic,
+ * immediately-discarded anchor element instead.
+ */
+async function downloadCsv(path: string, fileName: string): Promise<void> {
+  const { headers, credentials } = await authHeaders();
+  const response = await fetch(`${API_BASE}${path}`, { credentials, headers });
+
+  if (!response.ok) {
+    throw new MediaAuditApiError(response.status, `Media Audit API request failed: GET ${path} -> ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export const MediaAuditRepository = {
   getSummary: () => request<AuditRun>("/summary"),
 
@@ -222,28 +284,19 @@ export const MediaAuditRepository = {
   getDeletionLog: (page = 1, pageSize = 50) =>
     request<DeletionLogResponse>(`/deletion-log?page=${page}&pageSize=${pageSize}`),
 
-  /**
-   * GET /export returns a CSV file, not JSON - a plain `<a href>` can't carry the Bearer token
-   * required (see module doc comment), so this fetches it as a Blob and triggers the download via
-   * a synthetic, immediately-discarded anchor element instead.
-   */
-  async exportCsv(query: MediaAuditItemsQuery = {}): Promise<void> {
-    const { headers, credentials } = await authHeaders();
-    const response = await fetch(`${API_BASE}/export${buildQueryString(query, false)}`, { credentials, headers });
+  getDiskSummary: () => request<DiskAuditRun>("/disk-summary"),
 
-    if (!response.ok) {
-      throw new Error(`Media Audit API request failed: GET /export -> ${response.status}`);
-    }
+  runDiskScan: () => request<DiskAuditRun>("/disk-scan", { method: "POST" }),
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    try {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "media-audit-export.csv";
-      link.click();
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  },
+  getDiskItems: () => request<DiskMediaItemsResult>("/disk-items"),
+
+  /** Admin-only (403 for non-admins) - FR-005, FR-006, FR-007, FR-009. Permanent - no Recycle Bin for disk-only files. */
+  deleteDiskItems: (relativePaths: string[]) =>
+    request<DiskMediaDeleteResult>("/disk-delete", { method: "POST", body: JSON.stringify({ relativePaths }) }),
+
+  /** Every disk-only file from the last completed scan, as a CSV download. */
+  exportDiskCsv: () => downloadCsv("/disk-export", "disk-media-export.csv"),
+
+  exportCsv: (query: MediaAuditItemsQuery = {}) =>
+    downloadCsv(`/export${buildQueryString(query, false)}`, "media-audit-export.csv"),
 };

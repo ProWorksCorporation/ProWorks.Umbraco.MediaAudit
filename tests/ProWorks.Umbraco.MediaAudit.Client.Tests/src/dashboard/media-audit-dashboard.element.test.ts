@@ -195,4 +195,28 @@ describe("media-audit-dashboard", () => {
     expect(el.shadowRoot!.querySelector("media-audit-delete-confirm")).to.not.exist;
     expect(getItemsCallCount).to.equal(1);
   });
+  it("Scan Disk Media sits next to Run Audit and opens the disk panel with a scan started", async () => {
+    const requests: string[] = [];
+    restoreFetch = stubFetch((url, init) => {
+      requests.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/disk-scan")) return jsonResponse({ runAt: null, totalFilesOnDisk: 0, diskOnlyCount: 0, diskOnlySizeBytes: 0, status: "Running", durationMs: null, errorMessage: null });
+      if (url.endsWith("/disk-summary")) return jsonResponse({ runAt: null, totalFilesOnDisk: 0, diskOnlyCount: 0, diskOnlySizeBytes: 0, status: "Complete", durationMs: null, errorMessage: null });
+      if (url.endsWith("/disk-items")) return jsonResponse({ items: [] });
+      throw new Error(`unexpected request: ${url}`);
+    });
+
+    const el = await dashboardFixture();
+    const labels = [...el.shadowRoot!.querySelectorAll(".toolbar > uui-button")].map((b) => b.textContent!.trim());
+    expect(labels.slice(0, 2)).to.deep.equal(["Run Audit", "Scan Disk Media"]);
+    expect(el.shadowRoot!.querySelector("media-audit-disk-panel")).to.be.null;
+
+    const scanButton = [...el.shadowRoot!.querySelectorAll("uui-button")].find((b) => b.textContent!.trim() === "Scan Disk Media")!;
+    await clickUuiButton(scanButton);
+    await aTimeout(0);
+    await el.updateComplete;
+
+    expect(el.shadowRoot!.querySelector("media-audit-disk-panel")).to.not.be.null;
+    expect(requests.some((r) => r.startsWith("POST") && r.endsWith("/disk-scan"))).to.be.true;
+    expect(scanButton.hasAttribute("disabled")).to.be.true;
+  });
 });

@@ -1,6 +1,8 @@
 import type {
   AuditRun,
   DeletionLogEntry,
+  DiskAuditRun,
+  DiskMediaItem,
   MediaAuditItem,
   MediaUsageReference,
 } from "../../../../src/ProWorks.Umbraco.MediaAudit/Client/src/api/media-audit.repository.js";
@@ -55,6 +57,32 @@ export function makeAuditRun(overrides: Partial<AuditRun> = {}): AuditRun {
     status: "Complete",
     durationMs: 123,
     errorMessage: null,
+    ...overrides,
+  };
+}
+
+export function makeDiskAuditRun(overrides: Partial<DiskAuditRun> = {}): DiskAuditRun {
+  return {
+    runAt: "2026-01-02T00:00:00Z",
+    totalFilesOnDisk: 5,
+    diskOnlyCount: 2,
+    diskOnlySizeBytes: 4096,
+    status: "Complete",
+    durationMs: 45,
+    errorMessage: null,
+    ...overrides,
+  };
+}
+
+let nextDiskItemId = 1;
+
+export function makeDiskItem(overrides: Partial<DiskMediaItem> = {}): DiskMediaItem {
+  const id = nextDiskItemId++;
+  return {
+    relativePath: `stray/orphan-${id}.jpg`,
+    url: `/media/stray/orphan-${id}.jpg`,
+    sizeBytes: 1024,
+    lastModifiedUtc: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
