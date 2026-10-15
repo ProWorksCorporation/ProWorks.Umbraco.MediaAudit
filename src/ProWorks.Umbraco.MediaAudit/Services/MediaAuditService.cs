@@ -51,7 +51,9 @@ public sealed class MediaAuditService : IMediaAuditService
             _currentRun = new AuditRun { Status = AuditRunStatus.Running };
         }
 
-        _ = Task.Run(() => ExecuteAuditAsync(cancellationToken), cancellationToken);
+        // Not the caller's token: that's the HTTP request's, which is cancelled once the 202 is sent
+        // (IIS in-process does this on completion), and a cancelled audit would sit at Running forever.
+        _ = Task.Run(() => ExecuteAuditAsync(CancellationToken.None));
 
         return Task.FromResult(GetCurrentAudit());
     }
