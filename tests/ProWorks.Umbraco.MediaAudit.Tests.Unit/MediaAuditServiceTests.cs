@@ -341,4 +341,29 @@ public class MediaAuditServiceTests
 
         Assert.Equal(new[] { "Homepage" }, names);
     }
+
+    [Fact]
+    public async Task RunAuditAsync_completes_even_when_the_triggering_request_token_is_cancelled()
+    {
+        var (service, mediaService, _, _, _) = CreateService();
+        using var requestAborted = new CancellationTokenSource();
+
+        // Two pages' worth, so the audit checks its token again after the request is cancelled mid-run.
+        long total = 501;
+        mediaService.Setup(s => s.GetPagedDescendants(
+                It.IsAny<int>(), It.IsAny<long>(), It.IsAny<int>(), out total,
+                It.IsAny<IQuery<IMedia>>(), It.IsAny<Ordering>()))
+            .Callback(() => requestAborted.Cancel())
+            .Returns(Array.Empty<IMedia>());
+
+        await service.RunAuditAsync(requestAborted.Token);
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (service.GetCurrentAudit().Status == AuditRunStatus.Running && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.Equal(AuditRunStatus.Complete, service.GetCurrentAudit().Status);
+    }
 }
