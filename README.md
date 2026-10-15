@@ -17,6 +17,9 @@ safe, auditable tools to clean up the rest.
   that's become referenced (or already been restored) since the last audit gets touched.
 - **Deletion log**: one accountability entry per delete/purge *batch* (who, when, how many items, how
   much space), not one entry per file, so it stays useful even after a large cleanup.
+- **Disk-only media cleanup**: find files sitting in the media folder that no Umbraco media item owns
+  (left over from migrations, failed uploads, or manual copies), export them to CSV, and delete
+  selected files or all of them. Folders left empty by a delete are removed too.
 
 ## Installation
 
@@ -38,9 +41,11 @@ enough to register the dashboard, its API, and its backoffice assets; no manual 
    it, each linking directly to that content item.
 5. Administrators additionally see delete/purge controls on "Unused" items, and can review the
    deletion log for a history of past cleanup actions.
+6. Click **Scan Disk Media** to list files on disk that Umbraco doesn't know about. Administrators
+   can delete them from the same panel.
 
-Anyone with Media section access can view the audit. Deleting and purging are restricted to
-administrators.
+Anyone with Media section access can view the audit and the disk scan. Deleting and purging are
+restricted to administrators.
 
 ## How it works
 
@@ -54,6 +59,12 @@ Before any delete or purge actually executes, that item gets an additional, edit
 as a safety net — because a delete is destructive, it deserves more certainty than the fast primary
 signal alone. A media item that lives inside a folder which is itself referenced (e.g. a
 gallery/slideshow block that picks the folder rather than each file) is treated as used too.
+
+The disk scan walks Umbraco's configured media file system (so it works with any storage provider)
+and compares every file against the stored file path of every media item, including items in the
+Recycle Bin, which still own their file until purged. Each delete re-checks that the file is still
+present and still unowned, is permanent (these files were never in Umbraco, so there's no Recycle
+Bin), and is recorded in the deletion log.
 
 Member data (profile photos, etc.) is intentionally out of scope for this version — only document
 content is scanned.
